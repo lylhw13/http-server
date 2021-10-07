@@ -134,7 +134,8 @@ int main(int argc, char *argv[])
 
         for (i = 0; i < nr_events; ++i) {
             if (events[i].data.fd == listenfd) {
-                connfd = accept(listenfd, (struct sockaddr *)&cliaddr, &cliaddr_len);
+                connfd = accept(listenfd, (struct sockaddr *)&cliaddr, &cliaddr_len);   /* does this would block */
+
                 LOGD("connect %d\n", connfd);
                 if (connfd > 0) {
                     setnonblocking(connfd);

@@ -1,3 +1,4 @@
 *.o
 *.out
 http_server
+ngx*
