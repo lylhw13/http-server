@@ -27,6 +27,7 @@ typedef struct {
 #define NGX_HTTP_HEAD                      0x00000004
 #define NGX_HTTP_POST                      0x00000008
 
+// GET /rfc/rfc2616.txt HTTP/2
 
 #define NGX_HTTP_PARSE_HEADER_DONE         1
 
@@ -47,54 +48,72 @@ typedef struct {
 
 struct http_request {
     int fd;
-    unsigned int state;
+    
+     /* used to parse HTTP headers */
+    ngx_uint_t                        state;
 
-    unsigned char *header_name_start;
-    unsigned char *header_name_end;
-    unsigned char *header_start;
-    unsigned char *header_end;
+    ngx_uint_t                        header_hash;
+    ngx_uint_t                        lowcase_index;
+    u_char                            lowcase_header[NGX_HTTP_LC_HEADER_LEN];
 
-    u_char *request_start;
-    u_char *request_end;
-    u_char *method_end;
-    u_char *method;
-    u_char *uri_start;
-    u_char *uri_end;
-    u_char *schema_start;
-    u_char *schema_end;
-    u_char *host_start;
-    u_char *host_end;
-    u_char *args_start;
-    u_char *empty_path_in_uri;
-    u_char *port_start;
-    u_char *port_end;
-    u_char *complex_uri;
-    u_char *quoted_uri;
-    u_char *plus_in_uri;
-    u_char *uri_ext;
+    u_char                           *header_name_start;
+    u_char                           *header_name_end;
+    u_char                           *header_start;
+    u_char                           *header_end;
 
-    ngx_str_t                         request_line;
-    ngx_str_t                         uri;
-    ngx_str_t                         args;
-    ngx_str_t                         exten;
-    ngx_str_t                         unparsed_uri;
+    /*
+     * a memory that can be reused after parsing a request line
+     * via ngx_http_ephemeral_t
+     */
 
-    ngx_str_t                         method_name;
-    ngx_str_t                         http_protocol;
-    ngx_str_t                         schema;
+    u_char                           *uri_start;
+    u_char                           *uri_end;
+    u_char                           *uri_ext;
+    u_char                           *args_start;
+    u_char                           *request_start;
+    u_char                           *request_end;
+    u_char                           *method_end;
+    u_char                           *schema_start;
+    u_char                           *schema_end;
+    u_char                           *host_start;
+    u_char                           *host_end;
+    u_char                           *port_start;
+    u_char                           *port_end;
 
-    ngx_uint_t method;
-    ngx_uint_t http_version;
-
-    unsigned http_minor:16;
-    unsigned http_major:16;
-
+    unsigned                          http_minor:16;
+    unsigned                          http_major:16;
     ngx_uint_t header_hash;
     ngx_uint_t lowcase_index;
 
     unsigned invalid_header:1;
     u_char lowcase_header[NGX_HTTP_LC_HEADER_LEN];
 
+    ngx_uint_t                        method;
+    ngx_uint_t                        http_version;
+
+    unsigned                          count:16;
+    unsigned                          subrequests:8;
+    unsigned                          blocked:8;
+
+    unsigned                          aio:1;
+
+    unsigned                          http_state:4;
+
+    /* URI with "/." and on Win32 with "//" */
+    unsigned                          complex_uri:1;
+
+    /* URI with "%" */
+    unsigned                          quoted_uri:1;
+
+    /* URI with "+" */
+    unsigned                          plus_in_uri:1;
+
+    /* URI with empty path */
+    unsigned                          empty_path_in_uri:1;
+
+    unsigned                          invalid_header:1;
+
+    ngx_str_t                         http_protocol;
 };
 
 struct http_buf {
