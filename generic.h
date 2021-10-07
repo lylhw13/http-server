@@ -6,6 +6,8 @@
 typedef unsigned char u_char;
 typedef unsigned int ngx_uint_t;
 typedef int ngx_int_t;
+typedef unsigned int uint32_t;
+
 
 typedef struct http_request http_request_t;
 
@@ -48,7 +50,7 @@ typedef struct {
 
 struct http_request {
     int fd;
-    
+
      /* used to parse HTTP headers */
     ngx_uint_t                        state;
 
@@ -66,6 +68,8 @@ struct http_request {
      * via ngx_http_ephemeral_t
      */
 
+    /* used to parse HTTP request line */
+
     u_char                           *uri_start;
     u_char                           *uri_end;
     u_char                           *uri_ext;
@@ -82,11 +86,6 @@ struct http_request {
 
     unsigned                          http_minor:16;
     unsigned                          http_major:16;
-    ngx_uint_t header_hash;
-    ngx_uint_t lowcase_index;
-
-    unsigned invalid_header:1;
-    u_char lowcase_header[NGX_HTTP_LC_HEADER_LEN];
 
     ngx_uint_t                        method;
     ngx_uint_t                        http_version;
@@ -119,8 +118,10 @@ struct http_request {
 struct http_buf {
     u_char *pos;
     u_char *last;
-
 };
+
+extern int http_parse_request_line(http_request_t *r, ngx_buf_t *b);
+
 
 #define LOGD(...) ((void)fprintf(stdout, __VA_ARGS__))
 #define LOGE(...) ((void)fprintf(stderr, __VA_ARGS__))

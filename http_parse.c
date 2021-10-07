@@ -6,8 +6,15 @@
 
 #include "generic.h"
 
-typedef unsigned int uint32_t;
+int ngx_hash(int a, int b)
+{
+    return 0;
+}
 
+int ngx_strncmp(char *a, char *b, int c)
+{   
+    return 0;
+}
 
 static uint32_t  usual[] = {
     0x00000000, /* 0000 0000 0000 0000  0000 0000 0000 0000 */
@@ -141,13 +148,6 @@ http_parse_request_line(http_request_t *r, ngx_buf_t *b)
                 break;
             }
 
-            // c = (u_char) (ch | 0x20);
-            // if (c >= 'a' && c <= 'z') {
-            //     r->schema_start = p;
-            //     state = sw_schema;
-            //     break;
-            // }
-
             switch (ch) {
             case ' ':
                 break;
@@ -155,48 +155,6 @@ http_parse_request_line(http_request_t *r, ngx_buf_t *b)
                 return NGX_HTTP_PARSE_INVALID_REQUEST;
             }
             break;
-
-        // case sw_schema:
-
-        //     c = (u_char) (ch | 0x20);
-        //     if (c >= 'a' && c <= 'z') {
-        //         break;
-        //     }
-
-        //     if ((ch >= '0' && ch <= '9') || ch == '+' || ch == '-' || ch == '.')
-        //     {
-        //         break;
-        //     }
-
-        //     switch (ch) {
-        //     case ':':
-        //         r->schema_end = p;
-        //         state = sw_schema_slash;
-        //         break;
-        //     default:
-        //         return NGX_HTTP_PARSE_INVALID_REQUEST;
-        //     }
-        //     break;
-
-        // case sw_schema_slash:
-        //     switch (ch) {
-        //     case '/':
-        //         state = sw_schema_slash_slash;
-        //         break;
-        //     default:
-        //         return NGX_HTTP_PARSE_INVALID_REQUEST;
-        //     }
-        //     break;
-
-        // case sw_schema_slash_slash:
-        //     switch (ch) {
-        //     case '/':
-        //         state = sw_host_start;
-        //         break;
-        //     default:
-        //         return NGX_HTTP_PARSE_INVALID_REQUEST;
-        //     }
-        //     break;
 
         case sw_host_start:
 
@@ -706,7 +664,7 @@ ngx_http_parse_header_line(http_request_t *r, ngx_buf_t *b,
                 c = lowcase[ch];
 
                 if (c) {
-                    hash = ngx_hash(0, c);
+                    // hash = ngx_hash(0, c);
                     r->lowcase_header[0] = c;
                     i = 1;
                     break;
@@ -714,7 +672,7 @@ ngx_http_parse_header_line(http_request_t *r, ngx_buf_t *b,
 
                 if (ch == '_') {
                     if (allow_underscores) {
-                        hash = ngx_hash(0, ch);
+                        // hash = ngx_hash(0, ch);
                         r->lowcase_header[0] = ch;
                         i = 1;
 
