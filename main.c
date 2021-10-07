@@ -11,6 +11,8 @@
 #include <string.h>
 #include <netdb.h>
 #include <sys/epoll.h>
+#include <fcntl.h>
+#include <errno.h>
 
 #define MAX_EVENTS 64
 
@@ -35,58 +37,13 @@ void usage(int state)
     exit(state);
 }
 
-int build_server(const char *port)
+void setnonblocking(int fd)
 {
-    struct addrinfo hints, *result, *rp;
-    int ecode;
-    int listenfd;
-
-    struct sockaddr_storage cliaddr;
-    socklen_t cliaddr_len;
-    int connfd;
-
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_PASSIVE;
-
-    if ((ecode = getaddrinfo(NULL, port, &hints, &result))) {
-        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(ecode));
-        exit(EXIT_FAILURE);
-    }
-
-    for (rp = result; rp != NULL; rp = rp->ai_next) {
-        listenfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-        if (listenfd == -1)
-            continue;
-
-        int opt = 1;
-        if (setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)))
-            perror("setsockopt");
-
-        if (bind(listenfd, rp->ai_addr, rp->ai_addrlen) == 0)
-            break;
-
-        close(listenfd);
-    }
-
-    freeaddrinfo(result);
-
-    if (rp == NULL) {
-        error("Could not bind");
-    }
-
-    if (listen(listenfd, 64) < 0)
-        error("listen");
-    for (;;) {
-        cliaddr_len= sizeof(cliaddr);
-
-        connfd = accept(listenfd, (struct sockaddr *)&cliaddr, &cliaddr_len);
-        if (connfd >= 0)
-            break;
-    }
-
-    return connfd;
+    int flags;
+    if (-1 == (flags = fcntl(fd, F_GETFL, 0)))
+        return;
+    fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+    return;
 }
 
 int create_and_bind(const char* port) 
@@ -145,12 +102,13 @@ int main(int argc, char *argv[])
 
     listenfd = create_and_bind(port);
     LOGD("listen fd %d\n", listenfd);
-
     if (listenfd < 0) 
         error("create and bind");
+
     if (listen(listenfd, SOMAXCONN) < 0)
         error("listen");
-
+    setnonblocking(listenfd);
+    
     epfd = epoll_create1(0);
     if (epfd < 0)
         error("epoll_create1");
@@ -166,7 +124,7 @@ int main(int argc, char *argv[])
     if (!events)
         error("malloc");
 
-    for (;;) {
+    while (1) {
         nr_events = epoll_wait(epfd, events, MAX_EVENTS, 0);
         if (nr_events < 0) {
             error("epoll_wait");
@@ -179,6 +137,8 @@ int main(int argc, char *argv[])
                 connfd = accept(listenfd, (struct sockaddr *)&cliaddr, &cliaddr_len);
                 LOGD("connect %d\n", connfd);
                 if (connfd > 0) {
+                    setnonblocking(connfd);
+
                     event.data.fd = connfd;
                     event.events = EPOLLIN;
 
@@ -191,13 +151,25 @@ int main(int argc, char *argv[])
             else {
                 if (events[i].events & EPOLLIN) {
                     // LOGE("epoll wait %d", events[i].data.fd);
+                    errno = 0;
                     nread = read(events[i].data.fd, buf, BUFSIZ);
+
+                    if (nread < 0) 
+                        if (errno == EAGAIN || errno == EWOULDBLOCK)
+                            continue;
+                    
+                    if (nread <= 0) {
+                        LOGE("close fd %d\n", events[i].data.fd);
+                        epoll_ctl(epfd, EPOLL_CTL_DEL, events[i].data.fd, NULL);
+                        close(connfd);
+                    }
+
                     if (nread > 0)
                         write(STDOUT_FILENO, buf, nread);
                 }
             }
-        }
-    }   
+        }   /* end for */
+    }   /* end while */
 
     free(events);
     return 0;

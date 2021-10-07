@@ -12,4 +12,4 @@ http_server: main.c
 	$(CC) $(CFLAG) -o http_server generic.h main.c $(LIBS)
 
 clean:
-	rm $(PROG) *.o *.out
+	rm $(PROG)
