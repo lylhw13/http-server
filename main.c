@@ -85,11 +85,17 @@ int create_and_bind(const char* port)
     return listenfd;
 }
 
+void do_request(http_request_t *req) 
+{
+    return;
+}
+
 /* single process */
 int main(int argc, char *argv[])
 {    
     char *port = "33333";
     int listenfd;
+    int currfd;
     int epfd;
 
     struct sockaddr_storage cliaddr;
@@ -140,7 +146,14 @@ int main(int argc, char *argv[])
                 if (connfd > 0) {
                     setnonblocking(connfd);
 
-                    event.data.fd = connfd;
+                    http_request_t *ptr = malloc(sizeof(http_request_t));
+                    if (ptr == NULL)
+                        continue;
+
+                    ptr->fd = connfd;
+
+                    // event.data.fd = connfd;
+                    event.data.ptr = ptr;
                     event.events = EPOLLIN;
 
                     if (epoll_ctl(epfd, EPOLL_CTL_ADD, connfd, &event) < 0)
@@ -150,11 +163,13 @@ int main(int argc, char *argv[])
                 continue;
             }
             else {
+                /* producer and consumer */
                 if (events[i].events & EPOLLIN) {
                     // LOGE("epoll wait %d", events[i].data.fd);
+                    http_request_t *ptr = events[i].data.ptr;
                     errno = 0;
-                    nread = read(events[i].data.fd, buf, BUFSIZ);
-
+                    nread = read(ptr->fd, ptr->buf, BUFSIZ);
+                    
                     if (nread < 0) 
                         if (errno == EAGAIN || errno == EWOULDBLOCK)
                             continue;
@@ -165,8 +180,10 @@ int main(int argc, char *argv[])
                         close(connfd);
                     }
 
-                    if (nread > 0)
+                    if (nread > 0) {
                         write(STDOUT_FILENO, buf, nread);
+                        ptr->last += nread;
+                    }
                 }
             }
         }   /* end for */

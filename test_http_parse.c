@@ -11,12 +11,27 @@
 // Sec-Fetch-Site: none
 // Sec-Fetch-User: ?1
 
+// POST / HTTP/1.1
+// key: value
+// Content-Type: text/plain
+// User-Agent: PostmanRuntime/7.26.8
+// Accept: */*
+// Cache-Control: no-cache
+// Postman-Token: 37fda8c3-206d-4d2c-b735-b808af442205
+// Host: 127.0.0.1:33333
+// Accept-Encoding: gzip, deflate, br
+// Connection: keep-alive
+// Content-Length: 15
+
+// this is content
+
 #include "generic.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <string.h>
 
 void print_str(char *start, char *end)
 {
@@ -28,31 +43,31 @@ void print_str(char *start, char *end)
 }
 
 
-int http_parse_header_lines(http_request_t *r, ngx_buf_t *b) 
+int http_parse_header_lines(http_request_t *r, http_buf_t *b) 
 {
-    ngx_int_t  res;
+    int_t  res;
     int i;
 
     for (;;) {
         res = ngx_http_parse_header_line(r, b, 1);
-        if (res == NGX_HTTP_PARSE_INVALID_HEADER) {
+        if (res == HTTP_PARSE_INVALID_HEADER) {
             printf("invalid");
             return -1;
         }
-        if (res == NGX_HTTP_PARSE_HEADER_DONE) {
+        if (res == HTTP_PARSE_HEADER_DONE) {
             puts("DONE......................");
             // print_str(r->header_name_start, r->header_name_end);
             // print_str(r->header_start, r->header_end);
             return 0;
         }
-        if (res == NGX_AGAIN) {
+        if (res == AGAIN) {
             puts("AGAIN......................");
             // print_str(r->header_name_start, r->header_name_end);
             // print_str(r->header_start, r->header_end);
             break;
         }
         // printf("res is %d\n", res);
-        if (res == NGX_OK) {
+        if (res == OK) {
             puts(".OK.....................");
             print_str(r->header_name_start, r->header_name_end);
             print_str(r->header_start, r->header_end);
@@ -62,13 +77,27 @@ int http_parse_header_lines(http_request_t *r, ngx_buf_t *b)
     return 0;
 }
 
-void wrte_body(http_request_t *r, ngx_buf_t *b)
+void wrte_body(http_request_t *r, http_buf_t *b)
 {
     printf("print_body");
     print_str(b->pos, b->last);
 }
 
-void test(ngx_buf_t *b)
+/* not empty, start from /, don't contain .. */
+int check_url(http_request_t *r, http_buf_t *b)
+{
+    if (r->uri_start == r->uri_end || *(r->uri_start) != '/')
+        return -1;
+
+    u_char *p;
+    for (p = r->uri_start; (p+1) != r->uri_end; p++) {
+        if (*p == '.' && *(p+1) == '.')
+            return -1;
+    }
+    return 0;
+}
+
+void test(http_buf_t *b)
 {
     static u_char a = 'c';
     b->pos = &a;
@@ -92,7 +121,7 @@ int main(int argc, char *argv[])
     while ((nread = read(STDIN_FILENO, buf + offset, BUFSIZ - offset)) > 0) 
         offset += nread;
     
-    ngx_buf_t nb;
+    http_buf_t nb;
     nb.pos = buf;
     nb.last = buf + offset;
 
@@ -117,6 +146,7 @@ int main(int argc, char *argv[])
 
     printf("method: ");
     print_str(req.request_start, req.method_end + 1);
+    // print_str(req.request_start, req.request_end);  // the request line
 
     printf("uri: ");
     print_str(req.uri_start, req.uri_end + 1);
