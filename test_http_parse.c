@@ -27,8 +27,63 @@ void print_str(char *start, char *end)
     puts("");
 }
 
+
+int http_parse_header_lines(http_request_t *r, ngx_buf_t *b) 
+{
+    ngx_int_t  res;
+    int i;
+
+    for (;;) {
+        res = ngx_http_parse_header_line(r, b, 1);
+        if (res == NGX_HTTP_PARSE_INVALID_HEADER) {
+            printf("invalid");
+            return -1;
+        }
+        if (res == NGX_HTTP_PARSE_HEADER_DONE) {
+            puts("DONE......................");
+            // print_str(r->header_name_start, r->header_name_end);
+            // print_str(r->header_start, r->header_end);
+            return 0;
+        }
+        if (res == NGX_AGAIN) {
+            puts("AGAIN......................");
+            // print_str(r->header_name_start, r->header_name_end);
+            // print_str(r->header_start, r->header_end);
+            break;
+        }
+        // printf("res is %d\n", res);
+        if (res == NGX_OK) {
+            puts(".OK.....................");
+            print_str(r->header_name_start, r->header_name_end);
+            print_str(r->header_start, r->header_end);
+        }
+    }
+    
+    return 0;
+}
+
+void wrte_body(http_request_t *r, ngx_buf_t *b)
+{
+    printf("print_body");
+    print_str(b->pos, b->last);
+}
+
+void test(ngx_buf_t *b)
+{
+    static u_char a = 'c';
+    b->pos = &a;
+}
+
 int main(int argc, char *argv[])
 {
+
+    // char a = 't';
+    // ngx_buf_t nb;
+    // nb.pos = &a;
+    // printf("%c\n", *(nb.pos));
+
+    // test(&nb);
+    // printf("%c\n", *(nb.pos));
     char buf[BUFSIZ];
     int nread;
     unsigned int offset;
@@ -41,8 +96,24 @@ int main(int argc, char *argv[])
     nb.pos = buf;
     nb.last = buf + offset;
 
+
     http_request_t req;
+    // printf("1 %c\n", *(nb.pos));
+
+
+    // printf("1 nb %ld, uri %ld \n", (unsigned long)nb.pos, (unsigned long) req.uri_start);
+    // printf("1 nb %c, uri %c \n", *(nb.pos), *(req.uri_start));
+
     http_parse_request_line(&req, &nb);
+    // printf("2 %c\n", *(nb.pos));
+
+    // printf("2 nb %ld, uri %ld \n", (unsigned long)nb.pos, (unsigned long) req.uri_start);
+    // printf("2 nb %c, uri %c \n", *(nb.pos), *(req.uri_start));
+
+
+
+    // printf("2 %ld\n", (unsigned long)nb.pos);
+
 
     printf("method: ");
     print_str(req.request_start, req.method_end + 1);
@@ -52,5 +123,12 @@ int main(int argc, char *argv[])
     
     printf("http_version: major %d, minor %d, version %d\n", req.http_major, req.http_minor, req.http_version);
 
-    return 0;
+    http_parse_header_lines(&req, &nb);
+    // printf("3 %c\n", *(nb.pos));
+    // printf("3 nb %ld, uri %ld \n", (unsigned long)nb.pos, (unsigned long) req.uri_start);
+    // printf("3 nb %c, uri %c \n", *(nb.pos), *(req.uri_start));
+
+
+
+    // return 0;
 }

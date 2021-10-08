@@ -121,6 +121,7 @@ struct http_buf {
 };
 
 extern int http_parse_request_line(http_request_t *r, ngx_buf_t *b);
+extern ngx_int_t ngx_http_parse_header_line(http_request_t *r, ngx_buf_t *b, ngx_uint_t allow_underscores);
 
 
 #define LOGD(...) ((void)fprintf(stdout, __VA_ARGS__))

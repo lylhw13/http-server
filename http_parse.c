@@ -607,6 +607,7 @@ done:
 }
 
 
+
 ngx_int_t
 ngx_http_parse_header_line(http_request_t *r, ngx_buf_t *b,
     ngx_uint_t allow_underscores)
@@ -642,7 +643,7 @@ ngx_http_parse_header_line(http_request_t *r, ngx_buf_t *b,
 
     for (p = b->pos; p < b->last; p++) {
         ch = *p;
-
+        
         switch (state) {
 
         /* first char */
@@ -877,6 +878,7 @@ done:
 
 header_done:
 
+    // r->header_name_end = p; /* Add */
     b->pos = p + 1;
     r->state = sw_start;
 
@@ -1014,6 +1016,9 @@ ngx_http_parse_uri(http_request_t *r)
 
     return NGX_OK;
 }
+
+
+
 
 
 // ngx_int_t
