@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
     // printf("1 nb %ld, uri %ld \n", (unsigned long)nb.pos, (unsigned long) req.uri_start);
     // printf("1 nb %c, uri %c \n", *(nb.pos), *(req.uri_start));
 
-    http_parse_request_line(&req, &nb);
+    // http_parse_request_line(&req, &nb);
     // printf("2 %c\n", *(nb.pos));
 
     // printf("2 nb %ld, uri %ld \n", (unsigned long)nb.pos, (unsigned long) req.uri_start);

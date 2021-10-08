@@ -51,7 +51,7 @@ static uint32_t  usual[] = {
 // GET /rfc/rfc2616.txt HTTP/2
 
 int
-http_parse_request_line(http_request_t *r, http_buf_t *b)
+http_parse_request_line(http_request_t *r)
 {
     u_char  c, ch, *p, *m;
     enum {
@@ -81,7 +81,7 @@ http_parse_request_line(http_request_t *r, http_buf_t *b)
 
     state = r->state;
 
-    for (p = b->pos; p < b->last; p++) {
+    for (p = r->pos; p < r->last; p++) {
         ch = *p;
 
         switch (state) {
@@ -583,14 +583,14 @@ http_parse_request_line(http_request_t *r, http_buf_t *b)
         }
     }
 
-    b->pos = p;
+    r->pos = p;
     r->state = state;
 
     return AGAIN;
 
 done:
 
-    b->pos = p + 1;
+    r->pos = p + 1;
 
     if (r->request_end == NULL) {
         r->request_end = p;

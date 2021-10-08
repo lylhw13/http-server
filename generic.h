@@ -30,6 +30,37 @@ typedef struct {
 
 // GET /rfc/rfc2616.txt HTTP/2
 
+// parse state
+
+/*
+ * POST method 
+ * parse_begin
+ * parse_request_in
+ * parse_request_finish
+ * parse_headers_in
+ * parse_headers_finish
+ * parse_body_in
+ * parse_body_finish
+ */
+#define PARSE_REQUEST
+#define PARSE_HEADERS
+#define PRASE_BODY
+
+/*
+ * GET method
+ * parse_begin
+ * parse_request_in
+ * parse_request_finish
+ * respond_in
+ * respond_finish
+ */
+#define PARSE_BEGIN
+#define PARSE_REQUEST_IN
+#define PARSE_REQUEST_FINISH
+#define RESPOND_IN
+#define RESPOND_FINISH
+
+
 #define HTTP_PARSE_HEADER_DONE         1
 
 #define HTTP_CLIENT_ERROR              10
@@ -49,6 +80,7 @@ typedef struct {
 
 struct http_request {
     int fd;
+    int epfd;
     u_char buf[BUFSIZ];
     u_char *pos;
     u_char *last;
@@ -122,7 +154,7 @@ struct http_buf {
     u_char *last;
 };
 
-extern int http_parse_request_line(http_request_t *r, http_buf_t *b);
+extern int http_parse_request_line(http_request_t *r);
 extern int_t ngx_http_parse_header_line(http_request_t *r, http_buf_t *b, uint_t allow_underscores);
 
 

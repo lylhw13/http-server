@@ -87,6 +87,49 @@ int create_and_bind(const char* port)
 
 void do_request(http_request_t *req) 
 {
+    int nread;
+    errno = 0;
+    nread = read(req->fd, req->buf, req->last - req->pos);
+    if (nread < 0) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK)
+            return;
+    }
+
+    if (nread == 0) {
+        LOGE("connect close. clear\n");
+        epoll_ctl(req->epfd, EPOLL_CTL_DEL, req->fd, NULL);
+        close(req->fd);
+        free(req);
+        return;
+    }
+
+    req->pos = req->buf;
+    req->last += nread;
+    http_parse_request_line(req);
+
+    printf("method: ");
+    print_str(req->request_start, req->method_end + 1);
+    printf("uri: ");
+    print_str(req->uri_start, req->uri_end + 1);
+    printf("http_version: major %d, minor %d, version %d\n", req->http_major, req->http_minor, req->http_version);
+
+    /* GET method
+     * just return the target and remove the content
+     */
+    if (strncmp(req->request_start, "GET", req->method_end + 1 - req->request_start)) {
+
+    }
+
+    /* POST method
+     * get the Content-length:
+     * 
+     */
+    if (strncmp(req->request_start, "POST", req->method_end + 1 - req->request_start)) {
+
+    }
+
+
+    memove(req->buf, req->pos, req->last - req->pos);   /* which is better, ring buffer or memove */
     return;
 }
 
@@ -146,10 +189,11 @@ int main(int argc, char *argv[])
                 if (connfd > 0) {
                     setnonblocking(connfd);
 
-                    http_request_t *ptr = malloc(sizeof(http_request_t));
+                    http_request_t *ptr = (http_request_t *)malloc(sizeof(http_request_t));
                     if (ptr == NULL)
                         continue;
 
+                    memset(ptr, 0, sizeof(http_request_t));
                     ptr->fd = connfd;
 
                     // event.data.fd = connfd;
@@ -166,24 +210,24 @@ int main(int argc, char *argv[])
                 /* producer and consumer */
                 if (events[i].events & EPOLLIN) {
                     // LOGE("epoll wait %d", events[i].data.fd);
-                    http_request_t *ptr = events[i].data.ptr;
-                    errno = 0;
-                    nread = read(ptr->fd, ptr->buf, BUFSIZ);
+                    // http_request_t *ptr = events[i].data.ptr;
+                    // errno = 0;
+                    // nread = read(ptr->fd, ptr->buf, BUFSIZ);
                     
-                    if (nread < 0) 
-                        if (errno == EAGAIN || errno == EWOULDBLOCK)
-                            continue;
+                    // if (nread < 0) 
+                    //     if (errno == EAGAIN || errno == EWOULDBLOCK)
+                    //         continue;
                     
-                    if (nread <= 0) {
-                        LOGE("close fd %d\n", events[i].data.fd);
-                        epoll_ctl(epfd, EPOLL_CTL_DEL, events[i].data.fd, NULL);
-                        close(connfd);
-                    }
+                    // if (nread <= 0) {
+                    //     LOGE("close fd %d\n", events[i].data.fd);
+                    //     epoll_ctl(epfd, EPOLL_CTL_DEL, events[i].data.fd, NULL);
+                    //     close(connfd);
+                    // }
 
-                    if (nread > 0) {
-                        write(STDOUT_FILENO, buf, nread);
-                        ptr->last += nread;
-                    }
+                    // if (nread > 0) {
+                    //     write(STDOUT_FILENO, buf, nread);
+                    //     ptr->last += nread;
+                    // }
                 }
             }
         }   /* end for */
