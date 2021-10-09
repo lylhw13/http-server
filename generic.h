@@ -77,6 +77,9 @@ typedef struct {
 
 #define HTTP_LC_HEADER_LEN 32
 
+#define SESSION_INIT 0 
+#define SESSION_READ 1
+
 
 struct http_request {
     int fd;
@@ -156,6 +159,15 @@ struct http_buf {
 
 extern int http_parse_request_line(http_request_t *r);
 extern int_t ngx_http_parse_header_line(http_request_t *r, http_buf_t *b, uint_t allow_underscores);
+
+static void print_str(char *start, char *end)
+{
+    char *p;
+    for (p = start; p != end; ++p)
+        putc(*p, stdout);
+
+    puts("");
+}
 
 
 #define LOGD(...) ((void)fprintf(stdout, __VA_ARGS__))

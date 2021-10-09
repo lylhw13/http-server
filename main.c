@@ -85,12 +85,25 @@ int create_and_bind(const char* port)
     return listenfd;
 }
 
+void do_response(http_request_t *session)
+{
+    int offset;
+    char buf[BUFSIZ];
+    char *header = "HTTP/1.0 200 OK\r\nContent-type: text/html\r\nConnection: keep-alive\r\nContent-length: %d\r\n\r\n";
+    char *content = "<html><head>this is header </head><body><h1>this is body</h1><body></html>";
+    offset = sprintf(buf, header, strlen(content));
+    strcat(buf + offset, content);
+    write(session->fd, buf, offset + strlen(content));
+}
+
 void do_request(http_request_t *req) 
 {
     int nread;
     errno = 0;
-    nread = read(req->fd, req->buf, req->last - req->pos);
-    if (nread < 0) {
+    nread = read(req->fd, req->buf, BUFSIZ);
+    write(STDOUT_FILENO, req->buf, nread);
+    // nread = read(req->fd, req->buf, req->last - req->pos);
+    if (nread <= 0) {
         if (errno == EAGAIN || errno == EWOULDBLOCK)
             return;
     }
@@ -104,33 +117,32 @@ void do_request(http_request_t *req)
     }
 
     req->pos = req->buf;
-    req->last += nread;
+    req->last = req->buf + nread;
     http_parse_request_line(req);
 
-    printf("method: ");
-    print_str(req->request_start, req->method_end + 1);
-    printf("uri: ");
-    print_str(req->uri_start, req->uri_end + 1);
+    printf("method: %.*s\n", (int)(req->method_end + 1 - req->request_start), req->request_start);
+    printf("uri: %.*s\n", (int)(req->uri_end + 1 - req->uri_start), req->uri_start);
     printf("http_version: major %d, minor %d, version %d\n", req->http_major, req->http_minor, req->http_version);
 
+    do_response(req);
     /* GET method
      * just return the target and remove the content
      */
-    if (strncmp(req->request_start, "GET", req->method_end + 1 - req->request_start)) {
+    // if (strncmp(req->request_start, "GET", req->method_end + 1 - req->request_start)) {
 
-    }
+    // }
 
-    /* POST method
-     * get the Content-length:
-     * 
-     */
-    if (strncmp(req->request_start, "POST", req->method_end + 1 - req->request_start)) {
+    // /* POST method
+    //  * get the Content-length:
+    //  * 
+    //  */
+    // if (strncmp(req->request_start, "POST", req->method_end + 1 - req->request_start)) {
 
-    }
+    // }
 
 
-    memove(req->buf, req->pos, req->last - req->pos);   /* which is better, ring buffer or memove */
-    return;
+    // memove(req->buf, req->pos, req->last - req->pos);   /* which is better, ring buffer or memove */
+    // return;
 }
 
 /* single process */
@@ -209,6 +221,7 @@ int main(int argc, char *argv[])
             else {
                 /* producer and consumer */
                 if (events[i].events & EPOLLIN) {
+                    do_request(events[i].data.ptr);
                     // LOGE("epoll wait %d", events[i].data.fd);
                     // http_request_t *ptr = events[i].data.ptr;
                     // errno = 0;
