@@ -78,6 +78,8 @@ typedef struct {
  * respond_finish
  */
 #define PARSE_BEGIN 0
+#define PARSE_HEADER 6
+#define PARSE_BODY 7
 #define PARSE_HEADER_IN 1
 #define PARSE_REQUEST_IN 2
 #define PARSE_REQUEST_FINISH 3

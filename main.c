@@ -96,14 +96,31 @@ void do_response(http_request_t *session)
     write(session->fd, buf, offset + strlen(content));
 }
 
+int parse_request_line(http_request_t *req, int nread) 
+{
+    int res;
+    req->pos = req->buf;
+    req->last = req->buf + nread;
+    res = http_parse_request_line(req);
+
+    printf("method: %.*s\n", (int)(req->method_end + 1 - req->request_start), req->request_start);
+    printf("uri: %.*s\n", (int)(req->uri_end + 1 - req->uri_start), req->uri_start);
+    return res;
+}
+
 void do_request(http_request_t *req) 
 {
     int nread;
     int res;
     errno = 0;
+
+    res = OK;
+
+    if (req->buf + BUFSIZ == req->last) /* full buf */
+        return;
+
     nread = read(req->fd, req->buf, (req->buf + BUFSIZ) - req->last);
     write(STDOUT_FILENO, req->buf, nread);
-    // nread = read(req->fd, req->buf, req->last - req->pos);
     if (nread < 0) {
         if (errno == EAGAIN || errno == EWOULDBLOCK)
             return;
@@ -117,39 +134,86 @@ void do_request(http_request_t *req)
         return;
     }
 
-    req->pos = req->buf;
     req->last = req->buf + nread;
-    res = http_parse_request_line(req);
 
-    printf("method: %.*s\n", (int)(req->method_end + 1 - req->request_start), req->request_start);
-    printf("uri: %.*s\n", (int)(req->uri_end + 1 - req->uri_start), req->uri_start);
-    // printf("http_version: major %d, minor %d, version %d\n", req->http_major, req->http_minor, req->http_version);
+    switch (req->session_state)
+    {
+    case PARSE_BEGIN:
+        res = http_parse_request_line(req);
 
-    if (req != OK) {
-        // return error page;
-        LOGD("parse request line error\n");
+        printf("method: %.*s\n", (int)(req->method_end + 1 - req->request_start), req->request_start);
+        printf("uri: %.*s\n", (int)(req->uri_end + 1 - req->uri_start), req->uri_start);
+        // check url
+        // fall through
+        req->session_state = PARSE_HEADER;
+    
+    case PARSE_HEADER:
+        res = http_parse_header_lines(req);
+        if (res == AGAIN) {
+            req->session_state = PARSE_HEADER;
+            return;        
+        }
+
+        if (req == HTTP_GET) {
+            ;   // return the target file
+            req->session_state = PARSE_BEGIN;
+            do_response(req);
+        }
+        if (req == HTTP_POST) {
+            ;   //write the target file
+            req->session_state = PARSE_BODY;
+        }
+        // fall through
+
+    case PARSE_BODY:
+        memmove(req->buf, req->pos, req->last - req->pos);   /* which is better, ring buffer or memove */
+
+        req->session_state = PARSE_BEGIN;
+        req->last -= (req->pos - req->buf);
+        req->pos = req->buf;
+        return;
+    
+    default:
+        break;
     }
 
-    // check url
+    // // req->pos = req->buf;
+    // if (req->session_state == PARSE_BEGIN)
+    //     res = http_parse_request_line(req);
 
-    puts("\nparse header \n");
-    res = http_parse_header_lines(req);
-    if (res == AGAIN) {
-        req->session_state = PARSE_HEADER_IN;
-        return;        
-    }
+    // printf("method: %.*s\n", (int)(req->method_end + 1 - req->request_start), req->request_start);
+    // printf("uri: %.*s\n", (int)(req->uri_end + 1 - req->uri_start), req->uri_start);
+    // // printf("http_version: major %d, minor %d, version %d\n", req->http_major, req->http_minor, req->http_version);
 
-    if (req == HTTP_GET) {
-        ;   // return the target file
-    }
-    if (req == HTTP_POST) {
-        ;   //write the target file
-    }
+    // if (req != OK) {
+    //     // return error page;
+    //     LOGD("parse request line error\n");
+    // }
 
-    do_response(req);
+    // // check url
 
-    // memove(req->buf, req->pos, req->last - req->pos);   /* which is better, ring buffer or memove */
-    // return;
+    // puts("\nparse header \n");
+
+    // res = http_parse_header_lines(req);
+    // if (res == AGAIN) {
+    //     req->session_state = PARSE_HEADER_IN;
+    //     return;        
+    // }
+
+    // if (req == HTTP_GET) {
+    //     ;   // return the target file
+    // }
+    // if (req == HTTP_POST) {
+    //     ;   //write the target file
+    // }
+
+    // do_response(req);
+
+close_out:
+    epoll_ctl(req->epfd, EPOLL_CTL_DEL, req->fd, NULL);
+    close(req->fd);
+    free(req);
+    return;
 }
 
 /* single process */
