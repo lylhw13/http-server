@@ -5,6 +5,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#define BUFSIZE 512
+
 #define LOGD(...) ((void)fprintf(stdout, __VA_ARGS__))
 #define LOGE(...) ((void)fprintf(stderr, __VA_ARGS__))
 
@@ -103,7 +105,7 @@ typedef struct {
 struct http_request {
     int fd;
     int epfd;
-    u_char buf[BUFSIZ];
+    u_char buf[BUFSIZE];
     u_char *pos;
     u_char *last;
     
