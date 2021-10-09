@@ -2,6 +2,11 @@
 #define GENERIC_H
 
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+#define LOGD(...) ((void)fprintf(stdout, __VA_ARGS__))
+#define LOGE(...) ((void)fprintf(stderr, __VA_ARGS__))
 
 typedef unsigned char u_char;
 typedef unsigned int uint_t;
@@ -24,9 +29,27 @@ typedef struct {
 #define CR (u_char)'\r'
 #define CRLF "\r\n"
 
+/* parse request line */
+
 #define HTTP_UNKNOWN                   0x00000001
 #define HTTP_GET                       0x00000002
 #define HTTP_POST                      0x00000008
+
+#define HTTP_PARSE_HEADER_DONE         1
+
+#define HTTP_CLIENT_ERROR              10
+#define HTTP_PARSE_INVALID_METHOD      10
+#define HTTP_PARSE_INVALID_REQUEST     11
+#define HTTP_PARSE_INVALID_VERSION     12
+#define HTTP_PARSE_INVALID_09_METHOD   13
+
+#define HTTP_PARSE_INVALID_HEADER      14
+
+#define OK 0
+#define ERROR -1
+#define AGAIN -2
+
+#define HTTP_LC_HEADER_LEN 32
 
 // GET /rfc/rfc2616.txt HTTP/2
 
@@ -54,31 +77,25 @@ typedef struct {
  * respond_in
  * respond_finish
  */
-#define PARSE_BEGIN
-#define PARSE_REQUEST_IN
-#define PARSE_REQUEST_FINISH
-#define RESPOND_IN
-#define RESPOND_FINISH
-
-
-#define HTTP_PARSE_HEADER_DONE         1
-
-#define HTTP_CLIENT_ERROR              10
-#define HTTP_PARSE_INVALID_METHOD      10
-#define HTTP_PARSE_INVALID_REQUEST     11
-#define HTTP_PARSE_INVALID_VERSION     12
-#define HTTP_PARSE_INVALID_09_METHOD   13
-
-#define HTTP_PARSE_INVALID_HEADER      14
-
-#define OK 0
-#define ERROR -1
-#define AGAIN -2
-
-#define HTTP_LC_HEADER_LEN 32
+#define PARSE_BEGIN 0
+#define PARSE_HEADER_IN 1
+#define PARSE_REQUEST_IN 2
+#define PARSE_REQUEST_FINISH 3
+#define RESPOND_IN 4
+#define RESPOND_FINISH 5
 
 #define SESSION_INIT 0 
 #define SESSION_READ 1
+
+#define MIN(a, b) ({\
+    typeof(a) _a = a; \
+    typeof(b) _b = b;  \
+    _a < _b?_a:_b;})
+
+#define MAX(a, b) ({\
+    typeof(a) _a = a; \
+    typeof(b) _b = b;  \
+    _a > _b?_a:_b;})
 
 
 struct http_request {
@@ -90,6 +107,8 @@ struct http_request {
     
      /* used to parse HTTP headers */
     uint_t                        state;
+
+    uint_t session_state;
 
     uint_t                        header_hash;
     uint_t                        lowcase_index;
@@ -134,6 +153,8 @@ struct http_request {
     unsigned                          aio:1;
 
     unsigned                          http_state:4;
+    unsigned keep_alive:1;
+    uint_t content_length;
 
     /* URI with "/." and on Win32 with "//" */
     unsigned                          complex_uri:1;
@@ -150,6 +171,8 @@ struct http_request {
     unsigned                          invalid_header:1;
 
     str_t                         http_protocol;
+
+
 };
 
 struct http_buf {
@@ -158,7 +181,7 @@ struct http_buf {
 };
 
 extern int http_parse_request_line(http_request_t *r);
-extern int_t ngx_http_parse_header_line(http_request_t *r, http_buf_t *b, uint_t allow_underscores);
+extern int_t ngx_http_parse_header_line(http_request_t *r, uint_t allow_underscores);
 
 static void print_str(char *start, char *end)
 {
@@ -169,8 +192,80 @@ static void print_str(char *start, char *end)
     puts("");
 }
 
+static int str_to_buf_lowcase(char *buf, const char *start, const char *end, int n)
+{
+    int len, i;
+    u_char c;
 
-#define LOGD(...) ((void)fprintf(stdout, __VA_ARGS__))
-#define LOGE(...) ((void)fprintf(stderr, __VA_ARGS__))
+    len = MAX(0, MIN(n - 1, end - start));
+
+    for (i = 0; i< len; ++i) {
+        c = start[i];
+
+        if (c >= 'A' && c<= 'Z')
+           c =  c - 'A' + 'a';
+
+        buf[i] = c;
+    }
+    buf[len] = '\0';
+    return len;
+}
+
+static int http_parse_header_lines(http_request_t *r) 
+{
+    int_t  res;
+    int i;
+
+    for (;;) {
+        res = ngx_http_parse_header_line(r, 1);
+        if (res == HTTP_PARSE_INVALID_HEADER) {
+            printf("invalid");
+            return -1;
+        }
+        if (res == HTTP_PARSE_HEADER_DONE) {
+            puts("DONE......................");
+            // print_str(r->header_name_start, r->header_name_end);
+            // print_str(r->header_start, r->header_end);
+            return 0;
+        }
+        if (res == AGAIN) {
+            puts("AGAIN......................");
+            // print_str(r->header_name_start, r->header_name_end);
+            // print_str(r->header_start, r->header_end);
+            break;
+        }
+        // printf("res is %d\n", res);
+        if (res == OK) {
+            puts(".OK.....................");
+            print_str(r->header_name_start, r->header_name_end);
+            print_str(r->header_start, r->header_end);
+            char key[64];
+            char value[64];
+            str_to_buf_lowcase(key, r->header_name_start, r->header_name_end, sizeof(key));
+            str_to_buf_lowcase(value, r->header_start, r->header_end, sizeof(value));
+
+            printf("key: %.*s\n", (int)strlen(key), key);
+            printf("value: %.*s\n", (int)strlen(value), value);
+
+
+            if (!strcmp(key, "connection")) {
+                if (!strcmp(value, "keep-alive"))
+                    r->keep_alive = 1;
+                else
+                    r->keep_alive = 0;
+                LOGE("keep-alive: %d\n", r->keep_alive);
+            }
+            else if (!strcmp(key, "content-length")) {
+                r->content_length = atol(value);
+                LOGE("content-length: %d\n", r->content_length);
+            }   
+        }
+    }
+    
+    return 0;
+}
+
+
+
 
 #endif

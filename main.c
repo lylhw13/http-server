@@ -99,16 +99,17 @@ void do_response(http_request_t *session)
 void do_request(http_request_t *req) 
 {
     int nread;
+    int res;
     errno = 0;
-    nread = read(req->fd, req->buf, BUFSIZ);
+    nread = read(req->fd, req->buf, (req->buf + BUFSIZ) - req->last);
     write(STDOUT_FILENO, req->buf, nread);
     // nread = read(req->fd, req->buf, req->last - req->pos);
-    if (nread <= 0) {
+    if (nread < 0) {
         if (errno == EAGAIN || errno == EWOULDBLOCK)
             return;
     }
 
-    if (nread == 0) {
+    if (nread <= 0) {
         LOGE("connect close. clear\n");
         epoll_ctl(req->epfd, EPOLL_CTL_DEL, req->fd, NULL);
         close(req->fd);
@@ -118,28 +119,34 @@ void do_request(http_request_t *req)
 
     req->pos = req->buf;
     req->last = req->buf + nread;
-    http_parse_request_line(req);
+    res = http_parse_request_line(req);
 
     printf("method: %.*s\n", (int)(req->method_end + 1 - req->request_start), req->request_start);
     printf("uri: %.*s\n", (int)(req->uri_end + 1 - req->uri_start), req->uri_start);
-    printf("http_version: major %d, minor %d, version %d\n", req->http_major, req->http_minor, req->http_version);
+    // printf("http_version: major %d, minor %d, version %d\n", req->http_major, req->http_minor, req->http_version);
+
+    if (req != OK) {
+        // return error page;
+        LOGD("parse request line error\n");
+    }
+
+    // check url
+
+    puts("\nparse header \n");
+    res = http_parse_header_lines(req);
+    if (res == AGAIN) {
+        req->session_state = PARSE_HEADER_IN;
+        return;        
+    }
+
+    if (req == HTTP_GET) {
+        ;   // return the target file
+    }
+    if (req == HTTP_POST) {
+        ;   //write the target file
+    }
 
     do_response(req);
-    /* GET method
-     * just return the target and remove the content
-     */
-    // if (strncmp(req->request_start, "GET", req->method_end + 1 - req->request_start)) {
-
-    // }
-
-    // /* POST method
-    //  * get the Content-length:
-    //  * 
-    //  */
-    // if (strncmp(req->request_start, "POST", req->method_end + 1 - req->request_start)) {
-
-    // }
-
 
     // memove(req->buf, req->pos, req->last - req->pos);   /* which is better, ring buffer or memove */
     // return;
@@ -206,7 +213,10 @@ int main(int argc, char *argv[])
                         continue;
 
                     memset(ptr, 0, sizeof(http_request_t));
+                    /* init session */
                     ptr->fd = connfd;
+                    ptr->pos = ptr->buf;
+                    ptr->last = ptr->buf;
 
                     // event.data.fd = connfd;
                     event.data.ptr = ptr;

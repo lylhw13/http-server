@@ -609,8 +609,7 @@ done:
 
 
 int_t
-ngx_http_parse_header_line(http_request_t *r, http_buf_t *b,
-    uint_t allow_underscores)
+ngx_http_parse_header_line(http_request_t *r, uint_t allow_underscores)
 {
     u_char      c, ch, *p;
     uint_t  hash, i;
@@ -641,7 +640,7 @@ ngx_http_parse_header_line(http_request_t *r, http_buf_t *b,
     hash = r->header_hash;
     i = r->lowcase_index;
 
-    for (p = b->pos; p < b->last; p++) {
+    for (p = r->pos; p < r->last; p++) {
         ch = *p;
 
         switch (state) {
@@ -860,7 +859,7 @@ ngx_http_parse_header_line(http_request_t *r, http_buf_t *b,
         }
     }
 
-    b->pos = p;
+    r->pos = p;
     r->state = state;
     r->header_hash = hash;
     r->lowcase_index = i;
@@ -869,7 +868,7 @@ ngx_http_parse_header_line(http_request_t *r, http_buf_t *b,
 
 done:
 
-    b->pos = p + 1;
+    r->pos = p + 1;
     r->state = sw_start;
     r->header_hash = hash;
     r->lowcase_index = i;
@@ -879,7 +878,7 @@ done:
 header_done:
 
     // r->header_name_end = p; /* Add */
-    b->pos = p + 1;
+    r->pos = p + 1;
     r->state = sw_start;
 
     return HTTP_PARSE_HEADER_DONE;
