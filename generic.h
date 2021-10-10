@@ -37,6 +37,10 @@ typedef struct {
 #define HTTP_GET                       0x00000002
 #define HTTP_POST                      0x00000008
 
+#define PARSE_BEGIN 0
+#define PARSE_HEADER 1
+#define PARSE_BODY 2
+
 #define HTTP_PARSE_HEADER_DONE         1
 
 #define HTTP_CLIENT_ERROR              10
@@ -67,9 +71,9 @@ typedef struct {
  * parse_body_in
  * parse_body_finish
  */
-#define PARSE_REQUEST
-#define PARSE_HEADERS
-#define PRASE_BODY
+// #define PARSE_REQUEST
+// #define PARSE_HEADERS
+// #define PRASE_BODY
 
 /*
  * GET method
@@ -79,14 +83,12 @@ typedef struct {
  * respond_in
  * respond_finish
  */
-#define PARSE_BEGIN 0
-#define PARSE_HEADER 6
-#define PARSE_BODY 7
-#define PARSE_HEADER_IN 1
-#define PARSE_REQUEST_IN 2
-#define PARSE_REQUEST_FINISH 3
-#define RESPOND_IN 4
-#define RESPOND_FINISH 5
+
+// #define PARSE_HEADER_IN 1
+// #define PARSE_REQUEST_IN 2
+// #define PARSE_REQUEST_FINISH 3
+// #define RESPOND_IN 4
+// #define RESPOND_FINISH 5
 
 #define SESSION_INIT 0 
 #define SESSION_READ 1
@@ -243,26 +245,27 @@ static int http_parse_header_lines(http_request_t *r)
             fputs(".OK.....................", stderr);
             print_str(r->header_name_start, r->header_name_end);
             print_str(r->header_start, r->header_end);
-            char key[64];
-            char value[64];
-            str_to_buf_lowcase(key, r->header_name_start, r->header_name_end, sizeof(key));
-            str_to_buf_lowcase(value, r->header_start, r->header_end, sizeof(value));
+            fprintf(stderr, "\n");
+            // char key[64];
+            // char value[64];
+            // str_to_buf_lowcase(key, r->header_name_start, r->header_name_end, sizeof(key));
+            // str_to_buf_lowcase(value, r->header_start, r->header_end, sizeof(value));
 
-            fprintf(stderr, "key: %.*s\n", (int)strlen(key), key);
-            fprintf(stderr, "value: %.*s\n", (int)strlen(value), value);
+            // fprintf(stderr, "key: %.*s\n", (int)strlen(key), key);
+            // fprintf(stderr, "value: %.*s\n", (int)strlen(value), value);
 
 
-            if (!strcmp(key, "connection")) {
-                if (!strcmp(value, "keep-alive"))
-                    r->keep_alive = 1;
-                else
-                    r->keep_alive = 0;
-                LOGE("keep-alive: %d\n", r->keep_alive);
-            }
-            else if (!strcmp(key, "content-length")) {
-                r->content_length = atol(value);
-                LOGE("content-length: %d\n", r->content_length);
-            }   
+            // if (!strcmp(key, "connection")) {
+            //     if (!strcmp(value, "keep-alive"))
+            //         r->keep_alive = 1;
+            //     else
+            //         r->keep_alive = 0;
+            //     LOGE("keep-alive: %d\n", r->keep_alive);
+            // }
+            // else if (!strcmp(key, "content-length")) {
+            //     r->content_length = atol(value);
+            //     LOGE("content-length: %d\n", r->content_length);
+            // }   
         }
     }
     
