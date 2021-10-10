@@ -205,8 +205,8 @@ http_parse_request_line(http_request_t *r)
                  * use single "/" from request line to preserve pointers,
                  * if request line will be copied to large client buffer
                  */
-                r->uri_start = r->schema_end + 1;
-                r->uri_end = r->schema_end + 2;
+                // r->uri_start = r->schema_end + 1;
+                // r->uri_end = r->schema_end + 2;
                 state = sw_http_09;
                 break;
             default:
@@ -279,8 +279,8 @@ http_parse_request_line(http_request_t *r)
                  * use single "/" from request line to preserve pointers,
                  * if request line will be copied to large client buffer
                  */
-                r->uri_start = r->schema_end + 1;
-                r->uri_end = r->schema_end + 2;
+                // r->uri_start = r->schema_end + 1;
+                // r->uri_end = r->schema_end + 2;
                 state = sw_http_09;
                 break;
             default:

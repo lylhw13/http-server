@@ -56,13 +56,101 @@ void shift_buf(http_request_t *session, u_char *target)
 
 void do_response(http_request_t *session)
 {
-    int offset;
-    char buf[BUFSIZE];
+    // int offset;
+    // char buf[BUFSIZE];
+    // char *header = "HTTP/1.1 200 OK\r\nContent-type: text/html; charset=utf-8\r\nConnection: keep-alive\r\nContent-length: %d\r\n\r\n";
+    // char *content = "<html><head>this is header </head><body><h1>this is body</h1><body></html>";
+    // offset = sprintf(buf, header, strlen(content));
+    // strcat(buf + offset, content);
+    // write(session->fd, buf, offset + strlen(content));
+
+    int offset, nwrite;
     char *header = "HTTP/1.1 200 OK\r\nContent-type: text/html; charset=utf-8\r\nConnection: keep-alive\r\nContent-length: %d\r\n\r\n";
     char *content = "<html><head>this is header </head><body><h1>this is body</h1><body></html>";
-    offset = sprintf(buf, header, strlen(content));
-    strcat(buf + offset, content);
-    write(session->fd, buf, offset + strlen(content));
+    offset = sprintf(session->out_buf, header, strlen(content));
+    strcat(session->out_buf + offset, content);
+    nwrite = write(session->fd, session->out_buf, offset + strlen(content));
+
+    if (nwrite < 0) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK)
+            return;
+    }
+
+    if (write <= 0) {
+        LOGE("connect close. clear\n");
+        // epoll_ctl(session->epfd, EPOLL_CTL_DEL, req->fd, NULL);
+        // close(req->fd);
+        // free(req);
+        return;
+    }
+
+}
+
+void write_response(http_request_t *session)
+{
+    int nwrite;
+    http_response_t *curr = session->responses;
+    while(curr->pos == curr->content_length) {
+        http_request_t *prev = curr;
+        curr = curr->next;
+        // free(prev);
+    }
+    nwrite = write(session->fd, curr->body + curr->pos, curr->content_length - curr->pos);
+    if (nwrite < 0) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK)
+            return;
+    }
+
+    if (write <= 0) {
+        LOGE("connect close. clear\n");
+        // epoll_ctl(session->epfd, EPOLL_CTL_DEL, req->fd, NULL);
+        // close(req->fd);
+        // free(req);
+        return;
+    }
+    curr->pos += nwrite;
+}
+
+
+void set_http_response_status(http_response_t *response, int status)
+{
+    response->status = status;
+}
+
+void set_http_response_header(http_response_t *response, char const *key, char const *value)
+{
+    http_header_t *curr_header = (http_header_t*)malloc(sizeof(http_header_t));
+    assert(curr_header != NULL);
+    curr_header->key = key;
+    curr_header->value = value;
+    http_header_t *prev = response->headers;
+    curr_header->next = prev;
+    response->headers = curr_header;
+}
+
+void set_http_response_body(http_response_t *response, char const *body, int content_length)
+{
+    response->body = body;
+    response->content_length = content_length;
+}
+
+
+void add_response(http_request_t *session)
+{
+    char *body = "hello world";
+    http_response_t *cresponse = (http_response_t*)malloc(sizeof(http_response_t));
+    set_http_response_status(cresponse, 200);
+    set_http_response_header(cresponse, "Content-type", "text/plain");
+    set_http_response_body(cresponse, body, strlen(body));
+    if (session->responses == NULL)
+        session->responses = cresponse;
+    else 
+        session->responses->next = cresponse;
+}
+
+void check_url() 
+{
+
 }
 
 void do_request(http_request_t *req) 
@@ -112,7 +200,7 @@ void do_request(http_request_t *req)
 
             fprintf(stderr, "method: %.*s\n", (int)(req->method_end + 1 - req->request_start), req->request_start);
             fprintf(stderr, "uri: %.*s\n", (int)(req->uri_end + 1 - req->uri_start), req->uri_start);
-            // check url
+            check_url();
             req->session_state = PARSE_HEADER;
             // fall through
         
@@ -124,18 +212,18 @@ void do_request(http_request_t *req)
                 shift_buf(req, req->header_name_start);
                 return;        
             }
+            // fall through
 
+        case PARSE_HEADER_DONE:
             if (req->method == HTTP_GET) {
                 ;   // return the target file
                 req->session_state = PARSE_BEGIN;
-                // memmove(req->buf, req->pos, req->last - req->pos);   /* which is better, ring buffer or memove */
                 fprintf(stderr, "parse header finish\n");
                 do_response(req);
                 if (req->keep_alive)
                     continue;
                 else
                     goto close_out;
-                // continue;
                 // return;
             }
             // if (req->method == HTTP_POST) {

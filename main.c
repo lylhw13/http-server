@@ -110,7 +110,7 @@ int main(int argc, char *argv[])
                     ptr->last = ptr->buf;
 
                     event.data.ptr = ptr;
-                    event.events = EPOLLIN;
+                    event.events = EPOLLIN | EPOLLOUT;
 
                     if (epoll_ctl(epfd, EPOLL_CTL_ADD, connfd, &event) < 0)
                         error("epoll_ctl");
@@ -122,6 +122,10 @@ int main(int argc, char *argv[])
                 /* producer and consumer */
                 if (events[i].events & EPOLLIN) {
                     do_request(events[i].data.ptr);
+                }
+
+                if (events[i].events & EPOLLOUT) {
+                    do_response(events[i].data.ptr);
                 }
             }
         }   /* end for */

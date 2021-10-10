@@ -1,6 +1,8 @@
 #ifndef GENERIC_H
 #define GENERIC_H
 
+#include "list.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -49,7 +51,8 @@ typedef struct {
 
 #define PARSE_BEGIN 0
 #define PARSE_HEADER 1
-#define PARSE_BODY 2
+#define PARSE_HEADER_DONE 2
+#define PARSE_BODY 3
 
 #define HTTP_PARSE_HEADER_DONE         1
 
@@ -94,8 +97,30 @@ typedef struct {
 #define SESSION_INIT 0 
 #define SESSION_READ 1
 
+// extern void add_response(http_request_t *session, );
 
+// struct http_response {
+//     int fd;
+//     struct list_head list;
+// };
 
+typedef struct http_header_s {
+    char const *key;
+    char const *value;
+    struct http_header_s *next;
+} http_header_t;
+
+typedef struct http_response_s {
+    http_header_t *headers;
+    int status;
+    int content_length;
+    char const *body;
+    int pos;
+    struct http_response_s *next;
+} http_response_t;
+
+#define RESPONSE_IN 0
+#define RESPONSE_END 1
 
 struct http_request {
     int fd;
@@ -103,6 +128,16 @@ struct http_request {
     u_char buf[BUFSIZE];
     u_char *pos;
     u_char *last;
+
+
+    struct list_head response_list;
+
+    u_char out_buf[BUFSIZE];
+    u_char *out_pos;
+    u_char *out_last;
+    http_response_t* responses;
+
+    /* used for response */
     
      /* used to parse HTTP headers */
     uint_t                        state;
@@ -118,11 +153,6 @@ struct http_request {
     u_char                           *header_start;
     u_char                           *header_end;
 
-    /*
-     * a memory that can be reused after parsing a request line
-     * via ngx_http_ephemeral_t
-     */
-
     /* used to parse HTTP request line */
 
     u_char                           *uri_start;
@@ -132,8 +162,6 @@ struct http_request {
     u_char                           *request_start;    /* request line start */
     u_char                           *request_end;      /* request line end */
     u_char                           *method_end;       /* method end */
-    u_char                           *schema_start;
-    u_char                           *schema_end;
     u_char                           *host_start;
     u_char                           *host_end;
     u_char                           *port_start;
@@ -170,7 +198,6 @@ struct http_request {
     unsigned                          invalid_header:1;
 
     str_t                         http_protocol;
-
 
 };
 
