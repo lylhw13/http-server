@@ -40,106 +40,7 @@ void setnonblocking(int fd)
     return;
 }
 
-void do_request(http_request_t *req) 
-{
-    int nread;
-    int parse_result;
-    errno = 0;
-    int len;
 
-    parse_result = OK;
-
-    if (req->buf + BUFSIZE <= req->last) /* full buf */ {
-        return;
-    }
-
-    len =  (req->buf + BUFSIZE) - req->last;
-    nread = read(req->fd, req->last, (req->buf + BUFSIZE) - req->last);
-    // fprintf(stderr, "\nlen is %d, read is %d\n", (int)len, (int)nread);
-    if (nread < 0) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK)
-            return;
-    }
-
-    if (nread <= 0) {
-        LOGE("connect close. clear\n");
-        epoll_ctl(req->epfd, EPOLL_CTL_DEL, req->fd, NULL);
-        close(req->fd);
-        free(req);
-        return;
-    }
-
-    req->last = req->last + nread;
-    // fprintf(stderr, "last is %d\n", (int)(req->last - req->buf));
-    // fprintf(stdout, "pos to last\n%.*s\n", (int)(req->last - req->pos), req->pos);
-
-    while (req->pos < req->last) {
-        switch (req->session_state)
-        {
-        case PARSE_BEGIN:
-            parse_result = http_parse_request_line(req);
-
-            if (parse_result == AGAIN) {
-                req->session_state = PARSE_BEGIN;
-                shift_buf(req, req->request_start);
-                return;
-            }
-
-            fprintf(stderr, "method: %.*s\n", (int)(req->method_end + 1 - req->request_start), req->request_start);
-            fprintf(stderr, "uri: %.*s\n", (int)(req->uri_end + 1 - req->uri_start), req->uri_start);
-            // check url
-            req->session_state = PARSE_HEADER;
-            // fall through
-        
-        case PARSE_HEADER:
-            parse_result = http_parse_header_lines(req);
-            fprintf(stderr, "\nparse result is %d\n", parse_result);
-            if (parse_result == AGAIN) {
-                req->session_state = PARSE_HEADER;
-                shift_buf(req, req->header_name_start);
-                return;        
-            }
-
-            if (req->method == HTTP_GET) {
-                ;   // return the target file
-                req->session_state = PARSE_BEGIN;
-                // memmove(req->buf, req->pos, req->last - req->pos);   /* which is better, ring buffer or memove */
-                fprintf(stderr, "parse header finish\n");
-                do_response(req);
-                if (req->keep_alive)
-                    continue;
-                else
-                    goto close_out;
-                // continue;
-                // return;
-            }
-            // if (req->method == HTTP_POST) {
-            //     ;   //write the target file
-            //     req->session_state = PARSE_BODY;
-            // }
-            // fall through
-
-        // case PARSE_BODY:
-        //     memmove(req->buf, req->pos, req->last - req->pos);   /* which is better, ring buffer or memove */
-
-        //     req->session_state = PARSE_BEGIN;
-        //     req->last -= (req->pos - req->buf);
-        //     req->pos = req->buf;
-        //     return;
-        
-        default:
-            break;
-        }
-    }
-
-    return;
-
-close_out:
-    epoll_ctl(req->epfd, EPOLL_CTL_DEL, req->fd, NULL);
-    close(req->fd);
-    free(req);
-    return;
-}
 
 /* single process */
 int main(int argc, char *argv[])
@@ -197,8 +98,6 @@ int main(int argc, char *argv[])
                 if (connfd > 0) {
                     int opt;
                     setnonblocking(connfd);
-                    // if (setsockopt(listenfd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt)))
-                    //     perror("setsockopt keep alive");
 
                     http_request_t *ptr = (http_request_t *)malloc(sizeof(http_request_t));
                     if (ptr == NULL)
@@ -210,7 +109,6 @@ int main(int argc, char *argv[])
                     ptr->pos = ptr->buf;
                     ptr->last = ptr->buf;
 
-                    // event.data.fd = connfd;
                     event.data.ptr = ptr;
                     event.events = EPOLLIN;
 

@@ -189,6 +189,7 @@ extern int create_and_bind(const char* port);
 
 extern void shift_buf(http_request_t *session, u_char *target);
 extern void do_response(http_request_t *session);
+extern void do_request(http_request_t *session);
 
 static void error(const char *str)
 {
