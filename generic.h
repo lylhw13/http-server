@@ -110,13 +110,18 @@ typedef struct http_header_s {
     struct http_header_s *next;
 } http_header_t;
 
+#define WRIET_HEADER 0
+#define WRITE_BODY 1
+
 typedef struct http_response_s {
     http_header_t *headers;
     int status;
     int content_length;
+    int header_length;
     char const *body;
     int pos;
     struct http_response_s *next;
+    int state;
 } http_response_t;
 
 #define RESPONSE_IN 0
@@ -130,11 +135,7 @@ struct http_request {
     u_char *last;
 
 
-    struct list_head response_list;
-
-    u_char out_buf[BUFSIZE];
-    u_char *out_pos;
-    u_char *out_last;
+    u_char out_buf[BUFSIZE];    /* used to response header */
     http_response_t* responses;
 
     /* used for response */

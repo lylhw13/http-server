@@ -86,15 +86,55 @@ void do_response(http_request_t *session)
 
 }
 
+void free_response(http_response_t *response)
+{
+    free(response);
+}
+
+char *status_text(int status)
+{
+    switch (status)
+    {   
+    case 200:
+        return "OK";
+    case 301:
+        return "Moved Permanently";
+    case 404:
+        return "NOT Found";    
+    default:
+        break;
+    }
+    return "";
+}
+
+void write_header_to_buffer(http_request_t *session, http_response_t *respond)
+{
+    int offset = 0;
+    int nwrite = 0;
+    http_header_t *header = respond->headers;
+    // http_response_t *respond = session
+    nwrite = sprintf(session->out_buf + offset, "HTTP/1.1 %d %s\r\n", respond->status, status_text(respond->status));
+    offset += nwrite;
+
+    while (!header) {
+        nwrite = sprintf(session->out_buf + offset, "%s: %s\r\n", header->key, header->value);
+        offset += nwrite;
+        header = header->next;
+    }
+}
+
 void write_response(http_request_t *session)
 {
     int nwrite;
     http_response_t *curr = session->responses;
     while(curr->pos == curr->content_length) {
-        http_request_t *prev = curr;
-        curr = curr->next;
-        // free(prev);
+        session->responses = curr->next;
+        free_response(curr);
+        curr = session->responses;
     }
+
+    // write header to buffer
+
     nwrite = write(session->fd, curr->body + curr->pos, curr->content_length - curr->pos);
     if (nwrite < 0) {
         if (errno == EAGAIN || errno == EWOULDBLOCK)
