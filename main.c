@@ -187,8 +187,11 @@ void do_request(http_request_t *req)
                 // memmove(req->buf, req->pos, req->last - req->pos);   /* which is better, ring buffer or memove */
                 fprintf(stderr, "parse header finish\n");
                 do_response(req);
-                // goto close_out;
-                continue;
+                if (req->keep_alive)
+                    continue;
+                else
+                    goto close_out;
+                // continue;
                 // return;
             }
             // if (req->method == HTTP_POST) {

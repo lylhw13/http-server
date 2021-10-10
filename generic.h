@@ -243,14 +243,27 @@ static int http_parse_header_lines(http_request_t *r)
         // printf("res is %d\n", res);
         if (res == OK) {
             fputs(".OK.....................", stderr);
-            print_str(r->header_name_start, r->header_name_end);
-            print_str(r->header_start, r->header_end);
-            fprintf(stderr, "\n");
+            // print_str(r->header_name_start, r->header_name_end);
+            // print_str(r->header_start, r->header_end);
+            fprintf(stderr, "%.*s:", (int)(r->header_name_end - r->header_name_start), r->header_name_start);
+            fprintf(stderr, "%.*s\n", (int)(r->header_end - r->header_start), r->header_start);
+
+            if (strlen("connection") == (r->header_name_end - r->header_name_start) && 
+                !strncasecmp(r->header_name_start, "connection", strlen("connection"))) {
+                    fprintf(stderr, "this is connection\n");
+                    // r->keep_alive = 1;
+                    if (!strncasecmp(r->header_start, "keep-alive", r->header_end - r->header_start))
+                        r->keep_alive = 1;
+                    if (!strncasecmp(r->header_start, "close", r->header_end - r->header_start))
+                        r->keep_alive = 0;
+                }
+
+
+        
             // char key[64];
             // char value[64];
             // str_to_buf_lowcase(key, r->header_name_start, r->header_name_end, sizeof(key));
             // str_to_buf_lowcase(value, r->header_start, r->header_end, sizeof(value));
-
             // fprintf(stderr, "key: %.*s\n", (int)strlen(key), key);
             // fprintf(stderr, "value: %.*s\n", (int)strlen(value), value);
 
