@@ -120,6 +120,7 @@ int parse_request_line(http_request_t *req, int nread)
     return res;
 }
 
+
 void do_request(http_request_t *req) 
 {
     int nread;
@@ -136,8 +137,6 @@ void do_request(http_request_t *req)
     len =  (req->buf + BUFSIZE) - req->last;
     nread = read(req->fd, req->last, (req->buf + BUFSIZE) - req->last);
     // fprintf(stderr, "\nlen is %d, read is %d\n", (int)len, (int)nread);
-    // write(STDOUT_FILENO, req->buf, nread);
-    fprintf(stdout, "\n");
     if (nread < 0) {
         if (errno == EAGAIN || errno == EWOULDBLOCK)
             return;
@@ -152,8 +151,8 @@ void do_request(http_request_t *req)
     }
 
     req->last = req->last + nread;
-    fprintf(stderr, "last is %d\n", (int)(req->last - req->buf));
-    fprintf(stdout, "pos to last\n%.*s\n", (int)(req->last - req->pos), req->pos);
+    // fprintf(stderr, "last is %d\n", (int)(req->last - req->buf));
+    // fprintf(stdout, "pos to last\n%.*s\n", (int)(req->last - req->pos), req->pos);
 
     while (req->pos < req->last) {
         switch (req->session_state)
@@ -170,8 +169,8 @@ void do_request(http_request_t *req)
             fprintf(stderr, "method: %.*s\n", (int)(req->method_end + 1 - req->request_start), req->request_start);
             fprintf(stderr, "uri: %.*s\n", (int)(req->uri_end + 1 - req->uri_start), req->uri_start);
             // check url
-            // fall through
             req->session_state = PARSE_HEADER;
+            // fall through
         
         case PARSE_HEADER:
             parse_result = http_parse_header_lines(req);
@@ -188,6 +187,7 @@ void do_request(http_request_t *req)
                 // memmove(req->buf, req->pos, req->last - req->pos);   /* which is better, ring buffer or memove */
                 fprintf(stderr, "parse header finish\n");
                 do_response(req);
+                // goto close_out;
                 continue;
                 // return;
             }
@@ -211,23 +211,6 @@ void do_request(http_request_t *req)
     }
 
     return;
-
-    
-
-    // // req->pos = req->buf;
-    // if (req->session_state == PARSE_BEGIN)
-    //     res = http_parse_request_line(req);
-
-    // printf("method: %.*s\n", (int)(req->method_end + 1 - req->request_start), req->request_start);
-    // printf("uri: %.*s\n", (int)(req->uri_end + 1 - req->uri_start), req->uri_start);
-    // // printf("http_version: major %d, minor %d, version %d\n", req->http_major, req->http_minor, req->http_version);
-
-    // if (req != OK) {
-    //     // return error page;
-    //     LOGD("parse request line error\n");
-    // }
-
-    // // check url
 
 close_out:
     epoll_ctl(req->epfd, EPOLL_CTL_DEL, req->fd, NULL);
