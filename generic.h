@@ -7,6 +7,20 @@
 
 #define BUFSIZE 512
 
+#define MIN(a, b) ({\
+    typeof(a) _a = a; \
+    typeof(b) _b = b;  \
+    _a < _b?_a:_b;})
+
+#define MAX(a, b) ({\
+    typeof(a) _a = a; \
+    typeof(b) _b = b;  \
+    _a > _b?_a:_b;})
+
+#define LF (u_char)'\n'
+#define CR (u_char)'\r'
+#define CRLF "\r\n"
+
 #define LOGD(...) ((void)fprintf(stdout, __VA_ARGS__))
 #define LOGE(...) ((void)fprintf(stderr, __VA_ARGS__))
 
@@ -26,10 +40,6 @@ typedef struct {
     u_char *data;
 } str_t;
 
-
-#define LF (u_char)'\n'
-#define CR (u_char)'\r'
-#define CRLF "\r\n"
 
 /* parse request line */
 
@@ -75,15 +85,6 @@ typedef struct {
 // #define PARSE_HEADERS
 // #define PRASE_BODY
 
-/*
- * GET method
- * parse_begin
- * parse_request_in
- * parse_request_finish
- * respond_in
- * respond_finish
- */
-
 // #define PARSE_HEADER_IN 1
 // #define PARSE_REQUEST_IN 2
 // #define PARSE_REQUEST_FINISH 3
@@ -93,15 +94,7 @@ typedef struct {
 #define SESSION_INIT 0 
 #define SESSION_READ 1
 
-#define MIN(a, b) ({\
-    typeof(a) _a = a; \
-    typeof(b) _b = b;  \
-    _a < _b?_a:_b;})
 
-#define MAX(a, b) ({\
-    typeof(a) _a = a; \
-    typeof(b) _b = b;  \
-    _a > _b?_a:_b;})
 
 
 struct http_request {
@@ -189,103 +182,18 @@ struct http_buf {
 extern int http_parse_request_line(http_request_t *r);
 extern int_t ngx_http_parse_header_line(http_request_t *r, uint_t allow_underscores);
 
-static void print_str(char *start, char *end)
+extern int http_parse_header_lines(http_request_t *r); 
+
+
+extern int create_and_bind(const char* port);
+
+extern void shift_buf(http_request_t *session, u_char *target);
+extern void do_response(http_request_t *session);
+
+static void error(const char *str)
 {
-    char *p;
-    for (p = start; p != end; ++p)
-        fputc(*p, stderr);
-
-    fputs("", stderr);
-}
-
-static int str_to_buf_lowcase(char *buf, const char *start, const char *end, int n)
-{
-    int len, i;
-    u_char c;
-
-    len = MAX(0, MIN(n - 1, end - start));
-
-    for (i = 0; i< len; ++i) {
-        c = start[i];
-
-        if (c >= 'A' && c<= 'Z')
-           c =  c - 'A' + 'a';
-
-        buf[i] = c;
-    }
-    buf[len] = '\0';
-    return len;
-}
-
-static int http_parse_header_lines(http_request_t *r) 
-{
-    int_t  res;
-    int i;
-
-    for (;;) {
-        res = ngx_http_parse_header_line(r, 1);
-        if (res == HTTP_PARSE_INVALID_HEADER) {
-            fprintf(stderr, "invalid");
-            return res;
-        }
-        if (res == HTTP_PARSE_HEADER_DONE) {
-            fputs("DONE......................", stderr);
-            // print_str(r->header_name_start, r->header_name_end);
-            // print_str(r->header_start, r->header_end);
-            return res;
-        }
-        if (res == AGAIN) {
-            fputs("AGAIN......................", stderr);
-            // print_str(r->header_name_start, r->header_name_end);
-            // print_str(r->header_start, r->header_end);
-            return res;
-        }
-        // printf("res is %d\n", res);
-        if (res == OK) {
-            fputs(".OK.....................", stderr);
-            // print_str(r->header_name_start, r->header_name_end);
-            // print_str(r->header_start, r->header_end);
-            fprintf(stderr, "%.*s:", (int)(r->header_name_end - r->header_name_start), r->header_name_start);
-            fprintf(stderr, "%.*s\n", (int)(r->header_end - r->header_start), r->header_start);
-
-            if (strlen("connection") == (r->header_name_end - r->header_name_start) && 
-                !strncasecmp(r->header_name_start, "connection", strlen("connection"))) {
-                    fprintf(stderr, "this is connection\n");
-                    // r->keep_alive = 1;
-                    if (!strncasecmp(r->header_start, "keep-alive", r->header_end - r->header_start))
-                        r->keep_alive = 1;
-                    if (!strncasecmp(r->header_start, "close", r->header_end - r->header_start))
-                        r->keep_alive = 0;
-                }
-
-
-        
-            // char key[64];
-            // char value[64];
-            // str_to_buf_lowcase(key, r->header_name_start, r->header_name_end, sizeof(key));
-            // str_to_buf_lowcase(value, r->header_start, r->header_end, sizeof(value));
-            // fprintf(stderr, "key: %.*s\n", (int)strlen(key), key);
-            // fprintf(stderr, "value: %.*s\n", (int)strlen(value), value);
-
-
-            // if (!strcmp(key, "connection")) {
-            //     if (!strcmp(value, "keep-alive"))
-            //         r->keep_alive = 1;
-            //     else
-            //         r->keep_alive = 0;
-            //     LOGE("keep-alive: %d\n", r->keep_alive);
-            // }
-            // else if (!strcmp(key, "content-length")) {
-            //     r->content_length = atol(value);
-            //     LOGE("content-length: %d\n", r->content_length);
-            // }   
-        }
-    }
-    
-    return res;
-}
-
-
-
+    perror(str);
+    exit(EXIT_FAILURE);
+};
 
 #endif
