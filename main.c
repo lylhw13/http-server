@@ -106,31 +106,28 @@ int parse_request_line(http_request_t *req, int nread)
     req->last = req->buf + nread;
     res = http_parse_request_line(req);
 
-    printf("method: %.*s\n", (int)(req->method_end + 1 - req->request_start), req->request_start);
-    printf("uri: %.*s\n", (int)(req->uri_end + 1 - req->uri_start), req->uri_start);
+    fprintf(stderr, "method: %.*s\n", (int)(req->method_end + 1 - req->request_start), req->request_start);
+    fprintf(stderr, "uri: %.*s\n", (int)(req->uri_end + 1 - req->uri_start), req->uri_start);
     return res;
 }
 
 void do_request(http_request_t *req) 
 {
     int nread;
-    int res;
+    int parse_result;
     errno = 0;
     int len;
 
-    res = OK;
+    parse_result = OK;
 
     if (req->buf + BUFSIZE <= req->last) /* full buf */ {
-        fprintf(stderr, "%s\n", "buffer full");
-        write(STDERR_FILENO, req->buf, BUFSIZE);
         return;
     }
-    fprintf(stderr, "before last is %d\n", (int)(req->last - req->buf));
 
     len =  (req->buf + BUFSIZE) - req->last;
     nread = read(req->fd, req->last, (req->buf + BUFSIZE) - req->last);
     fprintf(stderr, "len is %d, read is %d\n", (int)len, (int)nread);
-    // write(STDOUT_FILENO, req->buf, nread);
+    write(STDOUT_FILENO, req->buf, nread);
     if (nread < 0) {
         if (errno == EAGAIN || errno == EWOULDBLOCK)
             return;
@@ -146,48 +143,63 @@ void do_request(http_request_t *req)
 
     req->last = req->last + nread;
     fprintf(stderr, "last is %d\n", (int)(req->last - req->buf));
-    do_response(req);
+    // do_response(req);
+    // return;
 
-    // switch (req->session_state)
-    // {
-    // case PARSE_BEGIN:
-    //     res = http_parse_request_line(req);
+    while (req->pos != req->last) {
+        switch (req->session_state)
+        {
+        case PARSE_BEGIN:
+            parse_result = http_parse_request_line(req);
 
-    //     printf("method: %.*s\n", (int)(req->method_end + 1 - req->request_start), req->request_start);
-    //     printf("uri: %.*s\n", (int)(req->uri_end + 1 - req->uri_start), req->uri_start);
-    //     // check url
-    //     // fall through
-    //     req->session_state = PARSE_HEADER;
+            fprintf(stderr, "method: %.*s\n", (int)(req->method_end + 1 - req->request_start), req->request_start);
+            fprintf(stderr, "uri: %.*s\n", (int)(req->uri_end + 1 - req->uri_start), req->uri_start);
+            // check url
+            // fall through
+            req->session_state = PARSE_HEADER;
+        
+        case PARSE_HEADER:
+            parse_result = http_parse_header_lines(req);
+            fprintf(stderr, "parse result is %d\n", parse_result);
+            if (parse_result == AGAIN) {
+                req->session_state = PARSE_HEADER;
+                memmove(req->buf, req->pos, req->last - req->pos - 1);   /* which is better, ring buffer or memove */
+                req->last -= (req->pos - req->buf - 1);
+                req->pos = req->buf;
+                return;        
+            }
+
+            if (req->method == HTTP_GET) {
+                ;   // return the target file
+                req->session_state = PARSE_BEGIN;
+                // memmove(req->buf, req->pos, req->last - req->pos);   /* which is better, ring buffer or memove */
+                fprintf(stderr, "parse header finish\n");
+                do_response(req);
+                continue;
+                // return;
+            }
+            if (req->method == HTTP_POST) {
+                ;   //write the target file
+                req->session_state = PARSE_BODY;
+            }
+            // fall through
+
+        case PARSE_BODY:
+            memmove(req->buf, req->pos, req->last - req->pos);   /* which is better, ring buffer or memove */
+
+            req->session_state = PARSE_BEGIN;
+            req->last -= (req->pos - req->buf);
+            req->pos = req->buf;
+            return;
+        
+        default:
+            break;
+        }
+    }
+
+    return;
+
     
-    // case PARSE_HEADER:
-    //     res = http_parse_header_lines(req);
-    //     if (res == AGAIN) {
-    //         req->session_state = PARSE_HEADER;
-    //         return;        
-    //     }
-
-    //     if (req == HTTP_GET) {
-    //         ;   // return the target file
-    //         req->session_state = PARSE_BEGIN;
-    //         do_response(req);
-    //     }
-    //     if (req == HTTP_POST) {
-    //         ;   //write the target file
-    //         req->session_state = PARSE_BODY;
-    //     }
-    //     // fall through
-
-    // case PARSE_BODY:
-    //     memmove(req->buf, req->pos, req->last - req->pos);   /* which is better, ring buffer or memove */
-
-    //     req->session_state = PARSE_BEGIN;
-    //     req->last -= (req->pos - req->buf);
-    //     req->pos = req->buf;
-    //     return;
-    
-    // default:
-    //     break;
-    // }
 
     // // req->pos = req->buf;
     // if (req->session_state == PARSE_BEGIN)
@@ -214,7 +226,7 @@ close_out:
 /* single process */
 int main(int argc, char *argv[])
 {    
-    char *port = "33335";
+    char *port = "33333";
     int listenfd;
     int currfd;
     int epfd;
@@ -267,8 +279,8 @@ int main(int argc, char *argv[])
                 if (connfd > 0) {
                     int opt;
                     setnonblocking(connfd);
-                    if (setsockopt(listenfd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt)))
-                        perror("setsockopt keep alive");
+                    // if (setsockopt(listenfd, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(opt)))
+                    //     perror("setsockopt keep alive");
 
                     http_request_t *ptr = (http_request_t *)malloc(sizeof(http_request_t));
                     if (ptr == NULL)

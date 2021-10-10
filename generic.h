@@ -191,9 +191,9 @@ static void print_str(char *start, char *end)
 {
     char *p;
     for (p = start; p != end; ++p)
-        putc(*p, stdout);
+        fputc(*p, stderr);
 
-    puts("");
+    fputs("", stderr);
 }
 
 static int str_to_buf_lowcase(char *buf, const char *start, const char *end, int n)
@@ -223,24 +223,24 @@ static int http_parse_header_lines(http_request_t *r)
     for (;;) {
         res = ngx_http_parse_header_line(r, 1);
         if (res == HTTP_PARSE_INVALID_HEADER) {
-            printf("invalid");
-            return -1;
+            fprintf(stderr, "invalid");
+            return res;
         }
         if (res == HTTP_PARSE_HEADER_DONE) {
-            puts("DONE......................");
+            fputs("DONE......................", stderr);
             // print_str(r->header_name_start, r->header_name_end);
             // print_str(r->header_start, r->header_end);
-            return 0;
+            return res;
         }
         if (res == AGAIN) {
-            puts("AGAIN......................");
+            fputs("AGAIN......................", stderr);
             // print_str(r->header_name_start, r->header_name_end);
             // print_str(r->header_start, r->header_end);
-            break;
+            return res;
         }
         // printf("res is %d\n", res);
         if (res == OK) {
-            puts(".OK.....................");
+            fputs(".OK.....................", stderr);
             print_str(r->header_name_start, r->header_name_end);
             print_str(r->header_start, r->header_end);
             char key[64];
@@ -248,8 +248,8 @@ static int http_parse_header_lines(http_request_t *r)
             str_to_buf_lowcase(key, r->header_name_start, r->header_name_end, sizeof(key));
             str_to_buf_lowcase(value, r->header_start, r->header_end, sizeof(value));
 
-            printf("key: %.*s\n", (int)strlen(key), key);
-            printf("value: %.*s\n", (int)strlen(value), value);
+            fprintf(stderr, "key: %.*s\n", (int)strlen(key), key);
+            fprintf(stderr, "value: %.*s\n", (int)strlen(value), value);
 
 
             if (!strcmp(key, "connection")) {
@@ -266,7 +266,7 @@ static int http_parse_header_lines(http_request_t *r)
         }
     }
     
-    return 0;
+    return res;
 }
 
 
