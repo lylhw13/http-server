@@ -41,7 +41,6 @@ void setnonblocking(int fd)
 }
 
 
-
 /* single process */
 int main(int argc, char *argv[])
 {    
@@ -125,7 +124,7 @@ int main(int argc, char *argv[])
                 }
 
                 if (events[i].events & EPOLLOUT) {
-                    do_response_old(events[i].data.ptr);
+                    http_respond(events[i].data.ptr);
                 }
             }
         }   /* end for */

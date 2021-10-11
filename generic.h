@@ -32,7 +32,7 @@ typedef int int_t;
 typedef unsigned int uint32_t;
 
 
-typedef struct http_request http_request_t;
+// typedef struct http_request http_request_t;
 
 typedef struct http_buf http_buf_t;
 
@@ -41,7 +41,6 @@ typedef struct {
     size_t len;
     u_char *data;
 } str_t;
-
 
 /* parse request line */
 
@@ -70,39 +69,23 @@ typedef struct {
 
 #define HTTP_LC_HEADER_LEN 32
 
-// GET /rfc/rfc2616.txt HTTP/2
+#define RESPONSE_IN 0
+#define RESPONSE_END 1
 
-// parse state
-
-/*
- * POST method 
- * parse_begin
- * parse_request_in
- * parse_request_finish
- * parse_headers_in
- * parse_headers_finish
- * parse_body_in
- * parse_body_finish
- */
-// #define PARSE_REQUEST
-// #define PARSE_HEADERS
-// #define PRASE_BODY
-
-// #define PARSE_HEADER_IN 1
-// #define PARSE_REQUEST_IN 2
-// #define PARSE_REQUEST_FINISH 3
-// #define RESPOND_IN 4
-// #define RESPOND_FINISH 5
+#define WRITE_BEGIN 0
+#define WRITE_HEADER 1
+#define WRITE_BODY 2
 
 #define SESSION_INIT 0 
 #define SESSION_READ 1
+#define SESSION_END 2
 
-// extern void add_response(http_request_t *session, );
 
-// struct http_response {
-//     int fd;
-//     struct list_head list;
-// };
+static void error(const char *str)
+{
+    perror(str);
+    exit(EXIT_FAILURE);
+};
 
 typedef struct http_header_s {
     char const *key;
@@ -110,38 +93,28 @@ typedef struct http_header_s {
     struct http_header_s *next;
 } http_header_t;
 
-#define WRITE_BEGIN 0
-#define WRITE_HEADER 1
-#define WRITE_BODY 2
-
-#define SESSION_END 3
-
 typedef struct http_response_s {
+    int status;     /* the status code for response */
+    int pos;        /* the pos int buffer */
+    int work_state; /* write header or write body */
     http_header_t *headers;
-    int status;
-    int content_length;
     int header_length;
     char const *body;
-    int pos;
+    int body_length;
     struct http_response_s *next;
-    int state;
 } http_response_t;
 
-#define RESPONSE_IN 0
-#define RESPONSE_END 1
 
-struct http_request {
+typedef struct http_request_s {
     int fd;
     int epfd;
-    u_char buf[BUFSIZE];
+    u_char buf[BUFSIZE];    /* usef for request */
     u_char *pos;
     u_char *last;
 
 
     u_char out_buf[BUFSIZE];    /* used to response header */
-    http_response_t* responses;
-
-    /* used for response */
+    http_response_t* responses; /* list of response */
     
      /* used to parse HTTP headers */
     uint_t                        state;
@@ -158,7 +131,6 @@ struct http_request {
     u_char                           *header_end;
 
     /* used to parse HTTP request line */
-
     u_char                           *uri_start;
     u_char                           *uri_end;
     u_char                           *uri_ext;
@@ -203,7 +175,7 @@ struct http_request {
 
     str_t                         http_protocol;
 
-};
+} http_request_t;
 
 struct http_buf {
     u_char *pos;
@@ -222,10 +194,8 @@ extern void shift_buf(http_request_t *session, u_char *target);
 extern void do_response_old(http_request_t *session);
 extern void do_request(http_request_t *session);
 
-static void error(const char *str)
-{
-    perror(str);
-    exit(EXIT_FAILURE);
-};
+extern void http_respond(http_request_t *session);
+
+
 
 #endif

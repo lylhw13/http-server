@@ -1,9 +1,11 @@
 #include "generic.h"
+
 #include <netinet/in.h>
 #include <netdb.h>
 #include <unistd.h>
 #include <errno.h>
 #include <sys/epoll.h>
+#include <assert.h>
 
 int create_and_bind(const char* port) 
 {
@@ -64,25 +66,25 @@ void do_response_old(http_request_t *session)
     // strcat(buf + offset, content);
     // write(session->fd, buf, offset + strlen(content));
 
-    int offset, nwrite;
-    char *header = "HTTP/1.1 200 OK\r\nContent-type: text/html; charset=utf-8\r\nConnection: keep-alive\r\nContent-length: %d\r\n\r\n";
-    char *content = "<html><head>this is header </head><body><h1>this is body</h1><body></html>";
-    offset = sprintf(session->out_buf, header, strlen(content));
-    strcat(session->out_buf + offset, content);
-    nwrite = write(session->fd, session->out_buf, offset + strlen(content));
+    // int offset, nwrite;
+    // char *header = "HTTP/1.1 200 OK\r\nContent-type: text/html; charset=utf-8\r\nConnection: keep-alive\r\nContent-length: %d\r\n\r\n";
+    // char *content = "<html><head>this is header </head><body><h1>this is body</h1><body></html>";
+    // offset = sprintf(session->out_buf, header, strlen(content));
+    // strcat(session->out_buf + offset, content);
+    // nwrite = write(session->fd, session->out_buf, offset + strlen(content));
 
-    if (nwrite < 0) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK)
-            return;
-    }
+    // if (nwrite < 0) {
+    //     if (errno == EAGAIN || errno == EWOULDBLOCK)
+    //         return;
+    // }
 
-    if (write <= 0) {
-        LOGE("connect close. clear\n");
-        // epoll_ctl(session->epfd, EPOLL_CTL_DEL, req->fd, NULL);
-        // close(req->fd);
-        // free(req);
-        return;
-    }
+    // if (write <= 0) {
+    //     LOGE("connect close. clear\n");
+    //     // epoll_ctl(session->epfd, EPOLL_CTL_DEL, req->fd, NULL);
+    //     // close(req->fd);
+    //     // free(req);
+    //     return;
+    // }
 
 }
 
@@ -132,11 +134,11 @@ void do_respond(http_request_t * session, http_response_t *curr_rsp)
 {
     int nwrite = 0;
     while(1) {
-        switch(curr_rsp->state){
+        switch(curr_rsp->work_state){
             case WRITE_BEGIN:
-                write_response_to_buffer(session, curr_rsp);
+                write_header_to_buffer(session, curr_rsp);
                 curr_rsp->pos = 0;
-                curr_rsp->state = WRITE_HEADER;
+                curr_rsp->work_state = WRITE_HEADER;
                 //fall through
             case WRITE_HEADER:
                 nwrite = write(session->fd, session->buf + curr_rsp->pos, curr_rsp->header_length - curr_rsp->pos);
@@ -152,12 +154,12 @@ void do_respond(http_request_t * session, http_response_t *curr_rsp)
                 curr_rsp->pos += nwrite;
                 if (curr_rsp->pos == curr_rsp->header_length) {
                     curr_rsp->pos = 0;
-                    curr_rsp->state = WRITE_BODY;
+                    curr_rsp->work_state = WRITE_BODY;
                 }
                 break;
 
             case WRITE_BODY:
-                nwrite = write(session->fd, curr_rsp->body + curr_rsp->pos, curr_rsp->content_length - curr_rsp->pos);
+                nwrite = write(session->fd, curr_rsp->body + curr_rsp->pos, curr_rsp->body_length - curr_rsp->pos);
                 errno = 0;
                 if (nwrite < 0) {
                     if (errno == EAGAIN || errno == EWOULDBLOCK)
@@ -168,11 +170,11 @@ void do_respond(http_request_t * session, http_response_t *curr_rsp)
                     return;
                 }
                 curr_rsp->pos += nwrite;
-                if (curr_rsp->pos == curr_rsp->content_length) {
+                if (curr_rsp->pos == curr_rsp->body_length) {
                     session->responses = curr_rsp->next;
                     free(curr_rsp);
                     curr_rsp->pos = 0;
-                    curr_rsp->state = WRITE_BEGIN;
+                    curr_rsp->work_state = WRITE_BEGIN;
                     return;
                 }
                 break;
@@ -211,7 +213,7 @@ void set_http_response_header(http_response_t *response, char const *key, char c
 void set_http_response_body(http_response_t *response, char const *body, int content_length)
 {
     response->body = body;
-    response->content_length = content_length;
+    response->body_length = content_length;
 }
 
 
@@ -282,7 +284,7 @@ void do_request(http_request_t *req)
             fprintf(stderr, "uri: %.*s\n", (int)(req->uri_end + 1 - req->uri_start), req->uri_start);
             check_url();
             req->session_state = PARSE_HEADER;
-            // fall through
+            /* fall through */
         
         case PARSE_HEADER:
             parse_result = http_parse_header_lines(req);
@@ -292,25 +294,26 @@ void do_request(http_request_t *req)
                 shift_buf(req, req->header_name_start);
                 return;        
             }
-            // fall through
+            /* fall through */
 
         case PARSE_HEADER_DONE:
             if (req->method == HTTP_GET) {
-                ;   // return the target file
-                req->session_state = PARSE_BEGIN;
                 fprintf(stderr, "parse header finish\n");
-                do_response_old(req);
-                if (req->keep_alive)
-                    continue;
-                else
-                    goto close_out;
+                // do_response_old(req);
+                add_response(req);
+                req->session_state = PARSE_BEGIN;
+                // if (req->keep_alive)
+                //     continue;
+                // else
+                //     goto close_out;
+                continue;
                 // return;
             }
             // if (req->method == HTTP_POST) {
             //     ;   //write the target file
             //     req->session_state = PARSE_BODY;
             // }
-            // fall through
+            /* fall through */
 
         // case PARSE_BODY:
         //     memmove(req->buf, req->pos, req->last - req->pos);   /* which is better, ring buffer or memove */

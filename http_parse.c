@@ -5,6 +5,7 @@
  */
 
 #include "generic.h"
+#include <string.h>
 
 int ngx_hash(int a, int b)
 {
