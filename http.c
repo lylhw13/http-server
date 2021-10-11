@@ -54,7 +54,7 @@ void shift_buf(http_request_t *session, u_char *target)
 }
 
 
-void do_response(http_request_t *session)
+void do_response_old(http_request_t *session)
 {
     // int offset;
     // char buf[BUFSIZE];
@@ -86,6 +86,8 @@ void do_response(http_request_t *session)
 
 }
 
+
+
 void free_response(http_response_t *response)
 {
     free(response);
@@ -107,13 +109,12 @@ char *status_text(int status)
     return "";
 }
 
-void write_header_to_buffer(http_request_t *session, http_response_t *respond)
+void write_header_to_buffer(http_request_t *session, http_response_t *response)
 {
     int offset = 0;
     int nwrite = 0;
-    http_header_t *header = respond->headers;
-    // http_response_t *respond = session
-    nwrite = sprintf(session->out_buf + offset, "HTTP/1.1 %d %s\r\n", respond->status, status_text(respond->status));
+    http_header_t *header = response->headers;
+    nwrite = sprintf(session->out_buf + offset, "HTTP/1.1 %d %s\r\n", response->status, status_text(response->status));
     offset += nwrite;
 
     while (!header) {
@@ -121,36 +122,75 @@ void write_header_to_buffer(http_request_t *session, http_response_t *respond)
         offset += nwrite;
         header = header->next;
     }
+
+    nwrite = sprintf(session->out_buf + offset, "\r\n");
+    offset += nwrite;
+    response->header_length = offset;
 }
 
-void write_response(http_request_t *session)
+void do_respond(http_request_t * session, http_response_t *curr_rsp)
 {
-    int nwrite;
+    int nwrite = 0;
+    while(1) {
+        switch(curr_rsp->state){
+            case WRITE_BEGIN:
+                write_response_to_buffer(session, curr_rsp);
+                curr_rsp->pos = 0;
+                curr_rsp->state = WRITE_HEADER;
+                //fall through
+            case WRITE_HEADER:
+                nwrite = write(session->fd, session->buf + curr_rsp->pos, curr_rsp->header_length - curr_rsp->pos);
+                errno = 0;
+                if (nwrite < 0) {
+                    if (errno == EAGAIN || errno == EWOULDBLOCK)
+                        return;
+                }
+                if (nwrite <= 0) {
+                    session->state = SESSION_END;
+                    return;
+                }
+                curr_rsp->pos += nwrite;
+                if (curr_rsp->pos == curr_rsp->header_length) {
+                    curr_rsp->pos = 0;
+                    curr_rsp->state = WRITE_BODY;
+                }
+                break;
+
+            case WRITE_BODY:
+                nwrite = write(session->fd, curr_rsp->body + curr_rsp->pos, curr_rsp->content_length - curr_rsp->pos);
+                errno = 0;
+                if (nwrite < 0) {
+                    if (errno == EAGAIN || errno == EWOULDBLOCK)
+                        return;
+                }
+                if (nwrite <= 0) {
+                    session->state = SESSION_END;
+                    return;
+                }
+                curr_rsp->pos += nwrite;
+                if (curr_rsp->pos == curr_rsp->content_length) {
+                    session->responses = curr_rsp->next;
+                    free(curr_rsp);
+                    curr_rsp->pos = 0;
+                    curr_rsp->state = WRITE_BEGIN;
+                    return;
+                }
+                break;
+
+            default:
+                return;
+        }
+    }
+}
+
+void http_respond(http_request_t *session)
+{
     http_response_t *curr = session->responses;
-    while(curr->pos == curr->content_length) {
-        session->responses = curr->next;
-        free_response(curr);
+    while(curr != NULL) {
+        do_respond(session, curr);
         curr = session->responses;
     }
-
-    // write header to buffer
-
-    nwrite = write(session->fd, curr->body + curr->pos, curr->content_length - curr->pos);
-    if (nwrite < 0) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK)
-            return;
-    }
-
-    if (write <= 0) {
-        LOGE("connect close. clear\n");
-        // epoll_ctl(session->epfd, EPOLL_CTL_DEL, req->fd, NULL);
-        // close(req->fd);
-        // free(req);
-        return;
-    }
-    curr->pos += nwrite;
 }
-
 
 void set_http_response_status(http_response_t *response, int status)
 {
@@ -259,7 +299,7 @@ void do_request(http_request_t *req)
                 ;   // return the target file
                 req->session_state = PARSE_BEGIN;
                 fprintf(stderr, "parse header finish\n");
-                do_response(req);
+                do_response_old(req);
                 if (req->keep_alive)
                     continue;
                 else

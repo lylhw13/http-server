@@ -110,8 +110,11 @@ typedef struct http_header_s {
     struct http_header_s *next;
 } http_header_t;
 
-#define WRIET_HEADER 0
-#define WRITE_BODY 1
+#define WRITE_BEGIN 0
+#define WRITE_HEADER 1
+#define WRITE_BODY 2
+
+#define SESSION_END 3
 
 typedef struct http_response_s {
     http_header_t *headers;
@@ -216,7 +219,7 @@ extern int http_parse_header_lines(http_request_t *r);
 extern int create_and_bind(const char* port);
 
 extern void shift_buf(http_request_t *session, u_char *target);
-extern void do_response(http_request_t *session);
+extern void do_response_old(http_request_t *session);
 extern void do_request(http_request_t *session);
 
 static void error(const char *str)
