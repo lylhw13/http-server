@@ -92,6 +92,13 @@ void do_response_old(http_request_t *session)
 
 void free_response(http_response_t *response)
 {
+    http_header_t *curr = response->headers;
+    while (curr) {
+        response->headers = curr->next;
+        free(curr);
+        curr = response->headers;       
+    }   
+    /* free body */
     free(response);
 }
 
@@ -119,29 +126,40 @@ void write_header_to_buffer(http_request_t *session, http_response_t *response)
     nwrite = sprintf(session->out_buf + offset, "HTTP/1.1 %d %s\r\n", response->status, status_text(response->status));
     offset += nwrite;
 
-    while (!header) {
+    while (header) {
+        LOGD("write_header\n");
         nwrite = sprintf(session->out_buf + offset, "%s: %s\r\n", header->key, header->value);
         offset += nwrite;
         header = header->next;
     }
 
+    nwrite = sprintf(session->out_buf + offset, "Content-length: %d\r\n", response->body_length);
+    offset += nwrite;
+    // header = header->next;
+
     nwrite = sprintf(session->out_buf + offset, "\r\n");
     offset += nwrite;
     response->header_length = offset;
+
+    LOGD("write_header_to_buffer\n");
+    fprintf(stderr, session->out_buf, offset);
 }
 
 void do_respond(http_request_t * session, http_response_t *curr_rsp)
 {
+    LOGD("do_respond\n");
     int nwrite = 0;
     while(1) {
         switch(curr_rsp->work_state){
             case WRITE_BEGIN:
+            LOGD("write begin\n");
                 write_header_to_buffer(session, curr_rsp);
                 curr_rsp->pos = 0;
                 curr_rsp->work_state = WRITE_HEADER;
                 //fall through
             case WRITE_HEADER:
-                nwrite = write(session->fd, session->buf + curr_rsp->pos, curr_rsp->header_length - curr_rsp->pos);
+            LOGD("write_header\n");
+                nwrite = write(session->fd, session->out_buf + curr_rsp->pos, curr_rsp->header_length - curr_rsp->pos);
                 errno = 0;
                 if (nwrite < 0) {
                     if (errno == EAGAIN || errno == EWOULDBLOCK)
@@ -159,7 +177,9 @@ void do_respond(http_request_t * session, http_response_t *curr_rsp)
                 break;
 
             case WRITE_BODY:
+            LOGD("write_body\n");
                 nwrite = write(session->fd, curr_rsp->body + curr_rsp->pos, curr_rsp->body_length - curr_rsp->pos);
+                write(STDOUT_FILENO, curr_rsp->body + curr_rsp->pos, curr_rsp->body_length - curr_rsp->pos);
                 errno = 0;
                 if (nwrite < 0) {
                     if (errno == EAGAIN || errno == EWOULDBLOCK)
@@ -171,8 +191,9 @@ void do_respond(http_request_t * session, http_response_t *curr_rsp)
                 }
                 curr_rsp->pos += nwrite;
                 if (curr_rsp->pos == curr_rsp->body_length) {
+                    LOGD("body equal\n");
                     session->responses = curr_rsp->next;
-                    free(curr_rsp);
+                    free_response(curr_rsp);
                     curr_rsp->pos = 0;
                     curr_rsp->work_state = WRITE_BEGIN;
                     return;
@@ -188,10 +209,11 @@ void do_respond(http_request_t * session, http_response_t *curr_rsp)
 void http_respond(http_request_t *session)
 {
     http_response_t *curr = session->responses;
-    while(curr != NULL) {
+    // while(curr != NULL) {
+    if (curr != NULL)
         do_respond(session, curr);
         curr = session->responses;
-    }
+    // }
 }
 
 void set_http_response_status(http_response_t *response, int status)
@@ -219,10 +241,13 @@ void set_http_response_body(http_response_t *response, char const *body, int con
 
 void add_response(http_request_t *session)
 {
-    char *body = "hello world";
+    LOGD("add_response\n");
+    char *body = "<html><head>this is header </head><body><h1>this is body</h1><body></html>";
     http_response_t *cresponse = (http_response_t*)malloc(sizeof(http_response_t));
+    if (cresponse == NULL)
+        perror("error cmalloc");
     set_http_response_status(cresponse, 200);
-    set_http_response_header(cresponse, "Content-type", "text/plain");
+    set_http_response_header(cresponse, "Content-type", "text/html; charset=utf-8");
     set_http_response_body(cresponse, body, strlen(body));
     if (session->responses == NULL)
         session->responses = cresponse;
@@ -299,14 +324,13 @@ void do_request(http_request_t *req)
         case PARSE_HEADER_DONE:
             if (req->method == HTTP_GET) {
                 fprintf(stderr, "parse header finish\n");
-                // do_response_old(req);
                 add_response(req);
                 req->session_state = PARSE_BEGIN;
                 // if (req->keep_alive)
                 //     continue;
                 // else
                 //     goto close_out;
-                continue;
+                return;
                 // return;
             }
             // if (req->method == HTTP_POST) {
