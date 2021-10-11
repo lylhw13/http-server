@@ -271,7 +271,7 @@ void check_url()
 
 }
 
-void do_request(http_request_t *req) 
+void do_request(http_request_t *session) 
 {
     int nread;
     int parse_result;
@@ -280,15 +280,15 @@ void do_request(http_request_t *req)
 
     parse_result = OK;
 
-    if (req->state == PARSE_BEGIN && req->http_state == SESSION_END)
+    if (session->state == PARSE_BEGIN && session->http_state == SESSION_END)
         return;
 
-    if (req->buf + BUFSIZE <= req->last) /* full buf */ {
+    if (session->buf + BUFSIZE <= session->last) /* full buf */ {
         return;
     }
 
-    len =  (req->buf + BUFSIZE) - req->last;
-    nread = read(req->fd, req->last, (req->buf + BUFSIZE) - req->last);
+    len =  (session->buf + BUFSIZE) - session->last;
+    nread = read(session->fd, session->last, (session->buf + BUFSIZE) - session->last);
     // fprintf(stderr, "\nlen is %d, read is %d\n", (int)len, (int)nread);
     if (nread < 0) {
         if (errno == EAGAIN || errno == EWOULDBLOCK)
@@ -297,61 +297,62 @@ void do_request(http_request_t *req)
 
     if (nread <= 0) {
         // LOGE("connect close. clear\n");
-        epoll_ctl(req->epfd, EPOLL_CTL_DEL, req->fd, NULL);
-        close(req->fd);
-        free(req);
+        epoll_ctl(session->epfd, EPOLL_CTL_DEL, session->fd, NULL);
+        close(session->fd);
+        free(session);
         return;
     }
 
-    req->last = req->last + nread;
+    session->last = session->last + nread;
     // fprintf(stderr, "last is %d\n", (int)(req->last - req->buf));
     // fprintf(stdout, "pos to last\n%.*s\n", (int)(req->last - req->pos), req->pos);
 
-    while (req->pos < req->last) {
-        switch (req->session_state)
+    while (session->pos < session->last) {
+        switch (session->session_state)
         {
         case PARSE_BEGIN:
-            parse_result = http_parse_request_line(req);
+            parse_result = http_parse_request_line(session);
 
             if (parse_result == AGAIN) {
-                req->session_state = PARSE_BEGIN;
-                shift_buf(req, req->request_start);
+                session->session_state = PARSE_BEGIN;
+                shift_buf(session, session->request_start);
                 return;
             }
 
             // fprintf(stderr, "method: %.*s\n", (int)(req->method_end + 1 - req->request_start), req->request_start);
             // fprintf(stderr, "uri: %.*s\n", (int)(req->uri_end + 1 - req->uri_start), req->uri_start);
             check_url();
-            req->session_state = PARSE_HEADER;
+            session->session_state = PARSE_HEADER;
             /* fall through */
         
         case PARSE_HEADER:
-            parse_result = http_parse_header_lines(req);
+            parse_result = http_parse_header_lines(session);
             // fprintf(stderr, "\nparse result is %d\n", parse_result);
             if (parse_result == AGAIN) {
-                req->session_state = PARSE_HEADER;
-                shift_buf(req, req->header_name_start);
+                session->session_state = PARSE_HEADER;
+                shift_buf(session, session->header_name_start);
                 return;        
             }
             /* fall through */
 
         case PARSE_HEADER_DONE:
-            if (req->method == HTTP_GET) {
+            if (session->method == HTTP_GET) {
                 // fprintf(stderr, "parse header finish\n");
-                add_response(req);
-                req->session_state = PARSE_BEGIN;
-                if (req->keep_alive)
+                add_response(session);
+                session->session_state = PARSE_BEGIN;
+                if (session->keep_alive)
                     continue;
 
-                if (req->pos == req->last) {
-                    req->http_state = SESSION_END;
+                if (session->pos == session->last) {
+                    session->http_state = SESSION_END;
+                    return;
                 }
             }
-            // if (req->method == HTTP_POST) {
-            //     ;   //write the target file
-            //     req->session_state = PARSE_BODY;
-            // }
-            /* fall through */
+        //     if (req->method == HTTP_POST) {
+        //         ;   //write the target file
+        //         req->session_state = PARSE_BODY;
+        //     }
+        //     /* fall through */
 
         // case PARSE_BODY:
         //     memmove(req->buf, req->pos, req->last - req->pos);   /* which is better, ring buffer or memove */
@@ -359,6 +360,7 @@ void do_request(http_request_t *req)
         //     req->session_state = PARSE_BEGIN;
         //     req->last -= (req->pos - req->buf);
         //     req->pos = req->buf;
+        //     nread = write(STDOUT_FILENO, req->pos, )
         //     return;
         
         default:
@@ -368,20 +370,20 @@ void do_request(http_request_t *req)
 
     return;
 
-close_out:
-    if (req->responses == NULL) {
-        fprintf(stderr, "response is null\n");
-        // epoll_ctl(req->epfd, EPOLL_CTL_DEL, req->fd, NULL);
-        close(req->fd);
-        free(req);
-    }
-    else {
-        // struct epoll_event event;
-        // event.data.ptr = req;
-        // event.events = EPOLLOUT;
-        // epoll_ctl(req->epfd, EPOLL_CTL_MOD, req->fd, &event);
-        fprintf(stderr, "shutdown read\n");
-        shutdown(req->fd, SHUT_RD);
-    }
-    return;
+// close_out:
+//     if (req->responses == NULL) {
+//         fprintf(stderr, "response is null\n");
+//         // epoll_ctl(req->epfd, EPOLL_CTL_DEL, req->fd, NULL);
+//         close(req->fd);
+//         free(req);
+//     }
+//     else {
+//         // struct epoll_event event;
+//         // event.data.ptr = req;
+//         // event.events = EPOLLOUT;
+//         // epoll_ctl(req->epfd, EPOLL_CTL_MOD, req->fd, &event);
+//         fprintf(stderr, "shutdown read\n");
+//         shutdown(req->fd, SHUT_RD);
+//     }
+//     return;
 }
