@@ -896,21 +896,21 @@ int http_parse_header_lines(http_request_t *r)
             return res;
         }
         if (res == HTTP_PARSE_HEADER_DONE) {
-            fputs("DONE......................", stderr);
+            // fputs("DONE......................", stderr);
             return res;
         }
         if (res == AGAIN) {
-            fputs("AGAIN......................", stderr);
+            // fputs("AGAIN......................", stderr);
             return res;
         }
         if (res == OK) {
-            fputs(".OK.....................", stderr);
-            fprintf(stderr, "%.*s:", (int)(r->header_name_end - r->header_name_start), r->header_name_start);
-            fprintf(stderr, "%.*s\n", (int)(r->header_end - r->header_start), r->header_start);
+            // fputs(".OK.....................", stderr);
+            // fprintf(stderr, "%.*s:", (int)(r->header_name_end - r->header_name_start), r->header_name_start);
+            // fprintf(stderr, "%.*s\n", (int)(r->header_end - r->header_start), r->header_start);
 
             if (strlen("connection") == (r->header_name_end - r->header_name_start) && 
                 !strncasecmp(r->header_name_start, "connection", strlen("connection"))) {
-                    fprintf(stderr, "this is connection\n");
+                    // fprintf(stderr, "this is connection\n");
                     if (!strncasecmp(r->header_start, "keep-alive", r->header_end - r->header_start))
                         r->keep_alive = 1;
                     if (!strncasecmp(r->header_start, "close", r->header_end - r->header_start))
