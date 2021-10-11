@@ -273,13 +273,14 @@ void check_url()
 
 void do_request(http_request_t *session) 
 {
-    int nread;
+    int nread, nwrite;
     int parse_result;
     errno = 0;
     int len;
 
     parse_result = OK;
 
+    /* OK to end session */
     if (session->state == PARSE_BEGIN && session->http_state == SESSION_END)
         return;
 
@@ -308,13 +309,13 @@ void do_request(http_request_t *session)
     // fprintf(stdout, "pos to last\n%.*s\n", (int)(req->last - req->pos), req->pos);
 
     while (session->pos < session->last) {
-        switch (session->session_state)
+        switch (session->parse_state)
         {
         case PARSE_BEGIN:
             parse_result = http_parse_request_line(session);
 
             if (parse_result == AGAIN) {
-                session->session_state = PARSE_BEGIN;
+                session->parse_state = PARSE_BEGIN;
                 shift_buf(session, session->request_start);
                 return;
             }
@@ -322,14 +323,14 @@ void do_request(http_request_t *session)
             // fprintf(stderr, "method: %.*s\n", (int)(req->method_end + 1 - req->request_start), req->request_start);
             // fprintf(stderr, "uri: %.*s\n", (int)(req->uri_end + 1 - req->uri_start), req->uri_start);
             check_url();
-            session->session_state = PARSE_HEADER;
+            session->parse_state = PARSE_HEADER;
             /* fall through */
         
         case PARSE_HEADER:
             parse_result = http_parse_header_lines(session);
             // fprintf(stderr, "\nparse result is %d\n", parse_result);
             if (parse_result == AGAIN) {
-                session->session_state = PARSE_HEADER;
+                session->parse_state = PARSE_HEADER;
                 shift_buf(session, session->header_name_start);
                 return;        
             }
@@ -339,7 +340,7 @@ void do_request(http_request_t *session)
             if (session->method == HTTP_GET) {
                 // fprintf(stderr, "parse header finish\n");
                 add_response(session);
-                session->session_state = PARSE_BEGIN;
+                session->parse_state = PARSE_BEGIN;
                 if (session->keep_alive)
                     continue;
 
@@ -348,20 +349,21 @@ void do_request(http_request_t *session)
                     return;
                 }
             }
-        //     if (req->method == HTTP_POST) {
-        //         ;   //write the target file
-        //         req->session_state = PARSE_BODY;
-        //     }
-        //     /* fall through */
+            if (session->method == HTTP_POST) {
+                //write the target file
+                session->parse_state = PARSE_BODY;
+            }
+            /* fall through */
 
-        // case PARSE_BODY:
-        //     memmove(req->buf, req->pos, req->last - req->pos);   /* which is better, ring buffer or memove */
+        case PARSE_BODY:
+            // memmove(req->buf, req->pos, req->last - req->pos);   /* which is better, ring buffer or memove */
 
-        //     req->session_state = PARSE_BEGIN;
-        //     req->last -= (req->pos - req->buf);
-        //     req->pos = req->buf;
-        //     nread = write(STDOUT_FILENO, req->pos, )
-        //     return;
+            // req->session_state = PARSE_BEGIN;
+            // req->last -= (req->pos - req->buf);
+            // req->pos = req->buf;
+            nwrite = write(STDOUT_FILENO, session->pos, session->last - session->pos);
+            fprintf(stderr, "write %d\n", nwrite);
+            return;
         
         default:
             break;

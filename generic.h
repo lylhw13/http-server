@@ -119,7 +119,11 @@ typedef struct http_request_s {
      /* used to parse HTTP headers */
     uint_t                        state;
 
-    uint_t session_state;
+    /* state for parse HTTP CONTENT */
+    uint_t parse_state;
+
+    /* state for connection */
+    unsigned                          http_state:4;
 
     uint_t                        header_hash;
     uint_t                        lowcase_index;
@@ -155,7 +159,6 @@ typedef struct http_request_s {
 
     unsigned                          aio:1;
 
-    unsigned                          http_state:4;
     unsigned keep_alive:1;
     uint_t content_length;
 
