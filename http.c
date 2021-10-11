@@ -217,6 +217,13 @@ void http_respond(http_request_t *session)
         do_respond(session, curr);
         curr = session->responses;
     }
+
+    if (session->http_state == SESSION_END) {
+        // fprintf(stderr, "respond end\n");
+        // epoll_ctl(session->epfd, EPOLL_CTL_DEL, session->fd, NULL);
+        close(session->fd); /* epoll will auto remove when fd is close */
+        free(session);
+    }
 }
 
 void set_http_response_status(http_response_t *response, int status)
@@ -272,6 +279,9 @@ void do_request(http_request_t *req)
     int len;
 
     parse_result = OK;
+
+    if (req->state == PARSE_BEGIN && req->http_state == SESSION_END)
+        return;
 
     if (req->buf + BUFSIZE <= req->last) /* full buf */ {
         return;
@@ -330,12 +340,12 @@ void do_request(http_request_t *req)
                 // fprintf(stderr, "parse header finish\n");
                 add_response(req);
                 req->session_state = PARSE_BEGIN;
-                // if (req->keep_alive)
-                //     continue;
-                // else
-                //     goto close_out;
-                return;
-                // return;
+                if (req->keep_alive)
+                    continue;
+
+                if (req->pos == req->last) {
+                    req->http_state = SESSION_END;
+                }
             }
             // if (req->method == HTTP_POST) {
             //     ;   //write the target file
@@ -359,8 +369,19 @@ void do_request(http_request_t *req)
     return;
 
 close_out:
-    epoll_ctl(req->epfd, EPOLL_CTL_DEL, req->fd, NULL);
-    close(req->fd);
-    free(req);
+    if (req->responses == NULL) {
+        fprintf(stderr, "response is null\n");
+        // epoll_ctl(req->epfd, EPOLL_CTL_DEL, req->fd, NULL);
+        close(req->fd);
+        free(req);
+    }
+    else {
+        // struct epoll_event event;
+        // event.data.ptr = req;
+        // event.events = EPOLLOUT;
+        // epoll_ctl(req->epfd, EPOLL_CTL_MOD, req->fd, &event);
+        fprintf(stderr, "shutdown read\n");
+        shutdown(req->fd, SHUT_RD);
+    }
     return;
 }
