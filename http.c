@@ -278,7 +278,7 @@ void add_error_response(http_request_t *session, char *rsp_state)
     sprintf(body, "<html>" CRLF
                         "<head><title>%s</title></head>" CRLF
                         "<body>" CRLF
-                        "<center><h1>%s</h1></center>" CRLF, rsp_state, rsp_state);
+                        "<center><h1>%s</h1></center></body></html>" CRLF, rsp_state, rsp_state);
     set_http_response_body(cresponse, body, strlen(body));
     cresponse->body_memop = FREE_MALLOC;
     

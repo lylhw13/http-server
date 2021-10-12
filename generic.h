@@ -7,7 +7,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define BUFSIZE 128
+#define BUFSIZE 1024
 
 #define MIN(a, b) ({\
     typeof(a) _a = a; \
