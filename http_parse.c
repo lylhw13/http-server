@@ -905,8 +905,8 @@ int http_parse_header_lines(http_request_t *session)
         }
         if (res == OK) {
             // fputs(".OK.....................", stderr);
-            fprintf(stderr, "%.*s:", (int)(session->header_name_end - session->header_name_start), session->header_name_start);
-            fprintf(stderr, "%.*s\n", (int)(session->header_end - session->header_start), session->header_start);
+            // fprintf(stderr, "%.*s:", (int)(session->header_name_end - session->header_name_start), session->header_name_start);
+            // fprintf(stderr, "%.*s\n", (int)(session->header_end - session->header_start), session->header_start);
 
             /* parse connection */
             if (strlen(CONNECTION) == (session->header_name_end - session->header_name_start) && 

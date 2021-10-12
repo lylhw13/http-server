@@ -58,41 +58,6 @@ void shift_buf(http_request_t *session, u_char *position)
     session->state = 0;
 }
 
-
-void do_response_old(http_request_t *session)
-{
-    // int offset;
-    // char buf[BUFSIZE];
-    // char *header = "HTTP/1.1 200 OK\r\nContent-type: text/html; charset=utf-8\r\nConnection: keep-alive\r\nContent-length: %d\r\n\r\n";
-    // char *content = "<html><head>this is header </head><body><h1>this is body</h1><body></html>";
-    // offset = sprintf(buf, header, strlen(content));
-    // strcat(buf + offset, content);
-    // write(session->fd, buf, offset + strlen(content));
-
-    // int offset, nwrite;
-    // char *header = "HTTP/1.1 200 OK\r\nContent-type: text/html; charset=utf-8\r\nConnection: keep-alive\r\nContent-length: %d\r\n\r\n";
-    // char *content = "<html><head>this is header </head><body><h1>this is body</h1><body></html>";
-    // offset = sprintf(session->out_buf, header, strlen(content));
-    // strcat(session->out_buf + offset, content);
-    // nwrite = write(session->fd, session->out_buf, offset + strlen(content));
-
-    // if (nwrite < 0) {
-    //     if (errno == EAGAIN || errno == EWOULDBLOCK)
-    //         return;
-    // }
-
-    // if (write <= 0) {
-    //     LOGE("connect close. clear\n");
-    //     // epoll_ctl(session->epfd, EPOLL_CTL_DEL, req->fd, NULL);
-    //     // close(req->fd);
-    //     // free(req);
-    //     return;
-    // }
-
-}
-
-
-
 void free_response(http_response_t *response)
 {
     http_header_t *curr = response->headers;
@@ -103,6 +68,23 @@ void free_response(http_response_t *response)
     }   
     /* free body */
     free(response);
+    response = NULL;
+}
+
+void free_response_list(http_response_t *response)
+{
+    http_response_t *curr = response;
+    while(curr) {
+        response = curr->next;
+        free_response(curr);
+        curr = response;
+    }
+    response = NULL;
+}
+
+void free_request(http_request_t *session)
+{
+    // free_response_list(session->responses);
 }
 
 char *status_text(int status)
@@ -330,9 +312,8 @@ void do_request(http_request_t *session)
                 return;
             }
 
-            fprintf(stderr, "method: %.*s\n", (int)(session->method_end + 1 - session->request_start), session->request_start);
-            fprintf(stderr, "uri: %.*s\n", (int)(session->uri_end + 1 - session->uri_start), session->uri_start);
-            // fprintf(stderr, "args: %.*s\n", (int))
+            // fprintf(stderr, "method: %.*s\n", (int)(session->method_end + 1 - session->request_start), session->request_start);
+            // fprintf(stderr, "uri: %.*s\n", (int)(session->uri_end + 1 - session->uri_start), session->uri_start);
             check_url();
             session->parse_state = PARSE_HEADER;
             /* fall through */

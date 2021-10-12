@@ -216,5 +216,9 @@ CRLF
 "<center>Request Header Or Cookie Too Large</center>" CRLF
 ;
 
+#define FREE_NONE 0
+#define FREE_MALLOC 1
+#define FREE_MMAP 2
+
 
 #endif
