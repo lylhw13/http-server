@@ -4,3 +4,5 @@ http_server
 ngx*
 *.gch
 tmp/
+*.txt
+

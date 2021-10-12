@@ -207,5 +207,14 @@ extern void do_respond(http_request_t *session);
 
 extern int atoi_hs(const char *start, const char *end);
 
+static char ngx_http_error_494_page[] =
+"<html>" CRLF
+"<head><title>400 Request Header Or Cookie Too Large</title></head>"
+CRLF
+"<body>" CRLF
+"<center><h1>400 Bad Request</h1></center>" CRLF
+"<center>Request Header Or Cookie Too Large</center>" CRLF
+;
+
 
 #endif

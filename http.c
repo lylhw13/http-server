@@ -252,11 +252,12 @@ void set_http_response_body(http_response_t *response, char const *body, int con
 }
 
 
-void add_response(http_request_t *session)
+void add_response(http_request_t *session, char *body)
 {
     // LOGD("add_response\n");
     // char *body = "<html><head>this is header </head><body><h1>this is body</h1><body></html>";
-    char *body = "Hello, World!";
+    if (!body)
+        body = "Hello, World!";
     http_response_t *cresponse = (http_response_t*)malloc(sizeof(http_response_t));
     if (cresponse == NULL)
         perror("error cmalloc");
@@ -318,13 +319,20 @@ void do_request(http_request_t *session)
             parse_result = http_parse_request_line(session);
 
             if (parse_result == AGAIN) {
+                /* this case is that the shift can't help */
+                if (session->request_start == session->buf) {
+                    add_response(session, ngx_http_error_494_page);
+                    session->http_state = SESSION_END;
+                    return;
+                }
                 session->parse_state = PARSE_BEGIN;
                 shift_buf(session, session->request_start);
                 return;
             }
 
-            // fprintf(stderr, "method: %.*s\n", (int)(req->method_end + 1 - req->request_start), req->request_start);
-            // fprintf(stderr, "uri: %.*s\n", (int)(req->uri_end + 1 - req->uri_start), req->uri_start);
+            fprintf(stderr, "method: %.*s\n", (int)(session->method_end + 1 - session->request_start), session->request_start);
+            fprintf(stderr, "uri: %.*s\n", (int)(session->uri_end + 1 - session->uri_start), session->uri_start);
+            // fprintf(stderr, "args: %.*s\n", (int))
             check_url();
             session->parse_state = PARSE_HEADER;
             /* fall through */
@@ -342,7 +350,7 @@ void do_request(http_request_t *session)
         case PARSE_HEADER_DONE:
             if (session->method == HTTP_GET) {
                 // fprintf(stderr, "parse header finish\n");
-                add_response(session);
+                add_response(session, NULL);
                 session->parse_state = PARSE_BEGIN;
                 if (session->keep_alive)
                     continue;
@@ -371,7 +379,7 @@ void do_request(http_request_t *session)
 
             if (session->content_length == 0) {
                 session->parse_state = PARSE_BEGIN;
-                add_response(session);
+                add_response(session, NULL);
                 return;
             }
 
