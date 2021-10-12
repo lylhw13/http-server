@@ -7,7 +7,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define BUFSIZE 128
+#define BUFSIZE 512
 
 #define MIN(a, b) ({\
     typeof(a) _a = a; \
@@ -86,6 +86,22 @@ typedef struct {
 #define SESSION_READ 1
 #define SESSION_END 2
 
+#define FREE_NONE 0
+#define FREE_MALLOC 1
+#define FREE_MMAP 2
+
+/* respond */
+#define RSP_OK                          "200 OK"
+#define RSP_BAD_REQUEST                 "400 Bad Request"
+#define RSP_NOT_FOUND                   "404 Not found"
+#define RSP_METHOD_NOT_ALLOWED          "405 Method Not Allowed"
+#define RSP_REQUEST_TIMEOUT             "408 Request Timeout"
+#define RSP_LENGTH_REQUIRED             "411 Length Required"
+#define RSP_PAYLOAD_TOO_LARGE           "413 Payload Too Large"
+#define RSP_URI_TOO_LONG                "414 URI Too Long"
+#define RSP_INTERNAL_SERVER_ERROR       "500 Internal Server Error"
+#define RSP_HTTP_VERSION_NOT_SUPPORTED  "505 HTTP Version Not Supported"
+
 
 static void error(const char *str)
 {
@@ -100,13 +116,14 @@ typedef struct http_header_s {
 } http_header_t;
 
 typedef struct http_response_s {
-    int status;     /* the status code for response */
+    char *status;     /* the status code for response */
     int pos;        /* the pos int buffer */
     int work_state; /* write header or write body */
     http_header_t *headers;
     int header_length;
     char const *body;
     int body_length;
+    int body_memop;      /* whether need to free the body */
     struct http_response_s *next;
 } http_response_t;
 
@@ -207,18 +224,27 @@ extern void do_respond(http_request_t *session);
 
 extern int atoi_hs(const char *start, const char *end);
 
-static char ngx_http_error_494_page[] =
-"<html>" CRLF
-"<head><title>400 Request Header Or Cookie Too Large</title></head>"
-CRLF
-"<body>" CRLF
-"<center><h1>400 Bad Request</h1></center>" CRLF
-"<center>Request Header Or Cookie Too Large</center>" CRLF
-;
+// static char ngx_http_error_494_page[] =
+// "<html>" CRLF
+// "<head><title>400 Request Header Or Cookie Too Large</title></head>"
+// CRLF
+// "<body>" CRLF
+// "<center><h1>400 Bad Request</h1></center>" CRLF
+// "<center>Request Header Or Cookie Too Large</center>" CRLF
+// ;
 
-#define FREE_NONE 0
-#define FREE_MALLOC 1
-#define FREE_MMAP 2
+
+
+// static char *http_error_page(const char * rsp_state)
+// {
+//     static char buf[256];
+//     int nwrite;
+//     nwrite = sprintf(buf, "<html>" CRLF
+//                         "<head><title>%s</title></head>" CRLF
+//                         "<body>" CRLF
+//                         "<center><h1>%s</h1></center>" CRLF, rsp_state, rsp_state);
+//     return buf;
+// }
 
 
 #endif

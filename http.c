@@ -87,35 +87,43 @@ void free_request(http_request_t *session)
     // free_response_list(session->responses);
 }
 
-char *status_text(int status)
-{
-    switch (status)
-    {   
-    case 200:
-        return "OK";
-    case 301:
-        return "Moved Permanently";
-    case 404:
-        return "NOT Found";    
-    default:
-        break;
-    }
-    return "";
-}
+// char *status_text(int status)
+// {
+//     switch (status)
+//     {   
+//     case 200:
+//         return "OK";
+//     case 301:
+//         return "Moved Permanently";
+//     case 404:
+//         return "NOT Found";    
+//     default:
+//         break;
+//     }
+//     return "";
+// }
 
 void write_header_to_buffer(http_request_t *session, http_response_t *response)
 {
+    LOGD("begin write_header_to_buffer\n");
     int offset = 0;
     int nwrite = 0;
     http_header_t *header = response->headers;
-    nwrite = sprintf(session->out_buf + offset, "HTTP/1.1 %d %s\r\n", response->status, status_text(response->status));
+    // nwrite = sprintf(session->out_buf + offset, "HTTP/1.1 %d %s\r\n", response->status, status_text(response->status));
+    // nwrite = sprintf(session->out_buf + offset, "HTTP/1.1 200 OK\r\n");
+    nwrite = sprintf(session->out_buf + offset, "HTTP/1.1 %s\r\n", response->status);
     offset += nwrite;
 
+
+    LOGD("begin to write header\n");
     while (header) {
+        LOGD("%s: %s\r\n", header->key, header->value);
         nwrite = sprintf(session->out_buf + offset, "%s: %s\r\n", header->key, header->value);
         offset += nwrite;
         header = header->next;
     }
+    LOGD("after to write header\n");
+
 
     /* content-length */
     nwrite = sprintf(session->out_buf + offset, "Content-length: %d\r\n", response->body_length);
@@ -131,8 +139,8 @@ void write_header_to_buffer(http_request_t *session, http_response_t *response)
     offset += nwrite;
     response->header_length = offset;
 
-    // LOGD("write_header_to_buffer\n");
-    // fprintf(stderr, session->out_buf, offset);
+    LOGD("write_header_to_buffer\n");
+    fprintf(stderr, session->out_buf, offset);
 }
 
 void send_response(http_request_t * session, http_response_t *curr_rsp)
@@ -141,13 +149,13 @@ void send_response(http_request_t * session, http_response_t *curr_rsp)
     while(1) {
         switch(curr_rsp->work_state){
             case WRITE_BEGIN:
-            // LOGD("write begin\n");
+            LOGD("write begin\n");
                 write_header_to_buffer(session, curr_rsp);
                 curr_rsp->pos = 0;
                 curr_rsp->work_state = WRITE_HEADER;
                 //fall through
             case WRITE_HEADER:
-            // LOGD("write_header\n");
+            LOGD("write_header\n");
                 nwrite = write(session->fd, session->out_buf + curr_rsp->pos, curr_rsp->header_length - curr_rsp->pos);
                 errno = 0;
                 if (nwrite < 0) {
@@ -166,7 +174,7 @@ void send_response(http_request_t * session, http_response_t *curr_rsp)
                 break;
 
             case WRITE_BODY:
-            // LOGD("write_body\n");
+            LOGD("write_body\n");
                 nwrite = write(session->fd, curr_rsp->body + curr_rsp->pos, curr_rsp->body_length - curr_rsp->pos);
                 // write(STDOUT_FILENO, curr_rsp->body + curr_rsp->pos, curr_rsp->body_length - curr_rsp->pos);
                 errno = 0;
@@ -180,7 +188,7 @@ void send_response(http_request_t * session, http_response_t *curr_rsp)
                 }
                 curr_rsp->pos += nwrite;
                 if (curr_rsp->pos == curr_rsp->body_length) {
-                    // LOGD("body equal\n");
+                    LOGD("body equal\n");
                     session->responses = curr_rsp->next;
                     free_response(curr_rsp);
                     curr_rsp->pos = 0;
@@ -211,7 +219,7 @@ void do_respond(http_request_t *session)
     }
 }
 
-void set_http_response_status(http_response_t *response, int status)
+void set_http_response_status(http_response_t *response, char * status)
 {
     response->status = status;
 }
@@ -234,18 +242,46 @@ void set_http_response_body(http_response_t *response, char const *body, int con
 }
 
 
-void add_response(http_request_t *session, char *body)
+void add_response(http_request_t *session, char *body, int memop)
 {
-    // LOGD("add_response\n");
+    LOGD("add_response\n");
     // char *body = "<html><head>this is header </head><body><h1>this is body</h1><body></html>";
     if (!body)
         body = "Hello, World!";
     http_response_t *cresponse = (http_response_t*)malloc(sizeof(http_response_t));
     if (cresponse == NULL)
         perror("error cmalloc");
-    set_http_response_status(cresponse, 200);
+    set_http_response_status(cresponse, RSP_OK);
     set_http_response_header(cresponse, "Content-type", "text/plain; charset=utf-8");
     set_http_response_body(cresponse, body, strlen(body));
+    cresponse->body_memop = memop;
+
+    if (session->responses == NULL)
+        session->responses = cresponse;
+    else 
+        session->responses->next = cresponse;
+}
+
+void add_error_response(http_request_t *session, char *rsp_state)
+{
+    http_response_t *cresponse;
+    char *body;
+    cresponse = (http_response_t*)malloc(sizeof(http_response_t));
+    if (cresponse == NULL)
+        perror("error cmalloc");
+    body = (char *)malloc(512);
+    if (body == NULL)
+        perror("error malloc");
+
+    set_http_response_status(cresponse, rsp_state);
+    set_http_response_header(cresponse, "Content-type", "text/html; charset=utf-8");
+    sprintf(body, "<html>" CRLF
+                        "<head><title>%s</title></head>" CRLF
+                        "<body>" CRLF
+                        "<center><h1>%s</h1></center>" CRLF, rsp_state, rsp_state);
+    set_http_response_body(cresponse, body, strlen(body));
+    cresponse->body_memop = FREE_MALLOC;
+    
     if (session->responses == NULL)
         session->responses = cresponse;
     else 
@@ -303,7 +339,7 @@ void do_request(http_request_t *session)
             if (parse_result == AGAIN) {
                 /* this case is that the shift can't help */
                 if (session->request_start == session->buf) {
-                    add_response(session, ngx_http_error_494_page);
+                    // add_response(session, ngx_http_error_494_page, FREE_NONE);
                     session->http_state = SESSION_END;
                     return;
                 }
@@ -331,7 +367,8 @@ void do_request(http_request_t *session)
         case PARSE_HEADER_DONE:
             if (session->method == HTTP_GET) {
                 // fprintf(stderr, "parse header finish\n");
-                add_response(session, NULL);
+                // add_response(session, NULL, FREE_NONE);
+                add_error_response(session, RSP_HTTP_VERSION_NOT_SUPPORTED);
                 session->parse_state = PARSE_BEGIN;
                 if (session->keep_alive)
                     continue;
@@ -360,7 +397,7 @@ void do_request(http_request_t *session)
 
             if (session->content_length == 0) {
                 session->parse_state = PARSE_BEGIN;
-                add_response(session, NULL);
+                add_response(session, NULL, FREE_NONE);
                 return;
             }
 
