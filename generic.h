@@ -7,7 +7,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define BUFSIZE 512
+#define BUFSIZE 128
 
 #define MIN(a, b) ({\
     typeof(a) _a = a; \
@@ -99,6 +99,7 @@ typedef struct {
 #define RSP_LENGTH_REQUIRED             "411 Length Required"
 #define RSP_PAYLOAD_TOO_LARGE           "413 Payload Too Large"
 #define RSP_URI_TOO_LONG                "414 URI Too Long"
+#define RSP_REQUEST_HEADER_FIELDS_TOO_LARGE "431 Request Header Fields Too Large"
 #define RSP_INTERNAL_SERVER_ERROR       "500 Internal Server Error"
 #define RSP_HTTP_VERSION_NOT_SUPPORTED  "505 HTTP Version Not Supported"
 

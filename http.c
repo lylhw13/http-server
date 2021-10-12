@@ -339,7 +339,7 @@ void do_request(http_request_t *session)
             if (parse_result == AGAIN) {
                 /* this case is that the shift can't help */
                 if (session->request_start == session->buf) {
-                    // add_response(session, ngx_http_error_494_page, FREE_NONE);
+                    add_error_response(session, RSP_REQUEST_HEADER_FIELDS_TOO_LARGE);
                     session->http_state = SESSION_END;
                     return;
                 }
@@ -367,8 +367,8 @@ void do_request(http_request_t *session)
         case PARSE_HEADER_DONE:
             if (session->method == HTTP_GET) {
                 // fprintf(stderr, "parse header finish\n");
-                // add_response(session, NULL, FREE_NONE);
-                add_error_response(session, RSP_HTTP_VERSION_NOT_SUPPORTED);
+                add_response(session, NULL, FREE_NONE);
+                // add_error_response(session, RSP_HTTP_VERSION_NOT_SUPPORTED);
                 session->parse_state = PARSE_BEGIN;
                 if (session->keep_alive)
                     continue;
