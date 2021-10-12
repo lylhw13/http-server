@@ -884,13 +884,13 @@ header_done:
     return HTTP_PARSE_HEADER_DONE;
 }
 
-int http_parse_header_lines(http_request_t *r) 
+int http_parse_header_lines(http_request_t *session) 
 {
     int_t  res;
     int i;
 
     for (;;) {
-        res = ngx_http_parse_header_line(r, 1);
+        res = ngx_http_parse_header_line(session, 1);
         if (res == HTTP_PARSE_INVALID_HEADER) {
             fprintf(stderr, "invalid");
             return res;
@@ -908,14 +908,26 @@ int http_parse_header_lines(http_request_t *r)
             // fprintf(stderr, "%.*s:", (int)(r->header_name_end - r->header_name_start), r->header_name_start);
             // fprintf(stderr, "%.*s\n", (int)(r->header_end - r->header_start), r->header_start);
 
-            if (strlen("connection") == (r->header_name_end - r->header_name_start) && 
-                !strncasecmp(r->header_name_start, "connection", strlen("connection"))) {
+            /* parse connection */
+            if (strlen("connection") == (session->header_name_end - session->header_name_start) && 
+                !strncasecmp(session->header_name_start, "connection", strlen("connection"))) {
                     // fprintf(stderr, "this is connection\n");
-                    if (!strncasecmp(r->header_start, "keep-alive", r->header_end - r->header_start))
-                        r->keep_alive = 1;
-                    if (!strncasecmp(r->header_start, "close", r->header_end - r->header_start))
-                        r->keep_alive = 0;
+                    if (!strncasecmp(session->header_start, "keep-alive", session->header_end - session->header_start))
+                        session->keep_alive = 1;
+                    if (!strncasecmp(session->header_start, "close", session->header_end - session->header_start))
+                        session->keep_alive = 0;
                 } 
+
+            /* parse content-length */
+            if (strlen(CONTENT_LENGTH) == (session->header_name_end - session->header_name_start) && 
+                !strncasecmp(session->header_name_start, CONTENT_LENGTH, strlen(CONTENT_LENGTH))) {
+                    session->content_length = atoi_hs(session->header_start, session->header_end);
+                    if (session->content_length < 0) {
+                        session->content_length = 0;
+                        session->http_state = SESSION_END;
+                    }
+                    LOGD("content_length is %d\n", session->content_length);
+                }     
         }
     }
     

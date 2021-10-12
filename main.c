@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
                 }
 
                 if (events[i].events & EPOLLOUT) {
-                    http_respond(events[i].data.ptr);
+                    do_respond(events[i].data.ptr);
                 }
             }
         }   /* end for */

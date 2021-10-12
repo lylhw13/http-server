@@ -26,6 +26,12 @@
 #define LOGD(...) ((void)fprintf(stdout, __VA_ARGS__))
 #define LOGE(...) ((void)fprintf(stderr, __VA_ARGS__))
 
+// static char *header_name_str[] = {"Content-Length", "Connection", "Content-Type", "Date"};
+
+#define CONTENT_LENGTH "Content-Length"
+#define CONTENT_TYPE "Content-Type"
+#define CONNECTION "Connection"
+
 typedef unsigned char u_char;
 typedef unsigned int uint_t;
 typedef int int_t;
@@ -197,8 +203,9 @@ extern void shift_buf(http_request_t *session, u_char *target);
 extern void do_response_old(http_request_t *session);
 extern void do_request(http_request_t *session);
 
-extern void http_respond(http_request_t *session);
+extern void do_respond(http_request_t *session);
 
+extern int atoi_hs(const char *start, const char *end);
 
 
 #endif

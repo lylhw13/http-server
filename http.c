@@ -150,7 +150,7 @@ void write_header_to_buffer(http_request_t *session, http_response_t *response)
     // fprintf(stderr, session->out_buf, offset);
 }
 
-void do_respond(http_request_t * session, http_response_t *curr_rsp)
+void send_response(http_request_t * session, http_response_t *curr_rsp)
 {
     int nwrite = 0;
     while(1) {
@@ -210,11 +210,11 @@ void do_respond(http_request_t * session, http_response_t *curr_rsp)
     }
 }
 
-void http_respond(http_request_t *session)
+void do_respond(http_request_t *session)
 {
     http_response_t *curr = session->responses;
     while(curr != NULL) {
-        do_respond(session, curr);
+        send_response(session, curr);
         curr = session->responses;
     }
 
@@ -362,7 +362,8 @@ void do_request(http_request_t *session)
             // req->last -= (req->pos - req->buf);
             // req->pos = req->buf;
             nwrite = write(STDOUT_FILENO, session->pos, session->last - session->pos);
-            fprintf(stderr, "write %d\n", nwrite);
+            fprintf(stderr, "\nwrite %d\n", nwrite);
+            add_response(session);
             return;
         
         default:
