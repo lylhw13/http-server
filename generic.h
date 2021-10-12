@@ -7,7 +7,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define BUFSIZE 512
+#define BUFSIZE 128
 
 #define MIN(a, b) ({\
     typeof(a) _a = a; \
@@ -122,7 +122,7 @@ typedef struct http_request_s {
     u_char out_buf[BUFSIZE];    /* used to response header */
     http_response_t* responses; /* list of response */
     
-     /* used to parse HTTP headers */
+    /* state for HTTP request line and  HTTP headers */
     uint_t                        state;
 
     /* state for parse HTTP CONTENT */

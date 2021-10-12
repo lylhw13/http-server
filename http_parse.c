@@ -909,9 +909,8 @@ int http_parse_header_lines(http_request_t *session)
             // fprintf(stderr, "%.*s\n", (int)(r->header_end - r->header_start), r->header_start);
 
             /* parse connection */
-            if (strlen("connection") == (session->header_name_end - session->header_name_start) && 
-                !strncasecmp(session->header_name_start, "connection", strlen("connection"))) {
-                    // fprintf(stderr, "this is connection\n");
+            if (strlen(CONNECTION) == (session->header_name_end - session->header_name_start) && 
+                !strncasecmp(session->header_name_start, CONNECTION, strlen(CONNECTION))) {
                     if (!strncasecmp(session->header_start, "keep-alive", session->header_end - session->header_start))
                         session->keep_alive = 1;
                     if (!strncasecmp(session->header_start, "close", session->header_end - session->header_start))

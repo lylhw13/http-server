@@ -46,11 +46,14 @@ int create_and_bind(const char* port)
     return listenfd;
 }
 
-void shift_buf(http_request_t *session, u_char *target) 
+void shift_buf(http_request_t *session, u_char *position) 
 {
-    int offset = target - session->buf;
-    memmove(session->buf, target, offset);
+    /* move the memory */
+    int offset = position - session->buf;
+    memmove(session->buf, position, offset);
     session->last -= offset;
+
+    /* restart parse the line */
     session->pos = session->buf;
     session->state = 0;
 }
@@ -356,15 +359,23 @@ void do_request(http_request_t *session)
             /* fall through */
 
         case PARSE_BODY:
-            // memmove(req->buf, req->pos, req->last - req->pos);   /* which is better, ring buffer or memove */
+            nread = MIN(session->last - session->pos, session->content_length);
+            nwrite = write(STDOUT_FILENO, session->pos, nread);
+            LOGD("\nwrite %d\n", nwrite);
 
-            // req->session_state = PARSE_BEGIN;
-            // req->last -= (req->pos - req->buf);
-            // req->pos = req->buf;
-            nwrite = write(STDOUT_FILENO, session->pos, session->last - session->pos);
-            fprintf(stderr, "\nwrite %d\n", nwrite);
-            add_response(session);
-            return;
+            session->content_length -= nwrite;
+            session->pos += nwrite;
+
+            if (session->last == session->pos)
+                shift_buf(session, session->pos);
+
+            if (session->content_length == 0) {
+                session->parse_state = PARSE_BEGIN;
+                add_response(session);
+                return;
+            }
+
+            continue;
         
         default:
             break;
