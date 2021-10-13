@@ -26,30 +26,6 @@
 #define LOGD(...) ((void)fprintf(stdout, __VA_ARGS__))
 #define LOGE(...) ((void)fprintf(stderr, __VA_ARGS__))
 
-// static char *header_name_str[] = {"Content-Length", "Connection", "Content-Type", "Date"};
-
-#define CONTENT_LENGTH "Content-Length"
-#define CONTENT_TYPE "Content-Type"
-#define CONNECTION "Connection"
-
-typedef unsigned char u_char;
-typedef unsigned int uint_t;
-typedef int int_t;
-typedef unsigned int uint32_t;
-
-
-// typedef struct http_request http_request_t;
-
-typedef struct http_buf http_buf_t;
-
-
-typedef struct {
-    size_t len;
-    u_char *data;
-} str_t;
-
-/* parse request line */
-
 #define HTTP_UNKNOWN                   0x00000001
 #define HTTP_GET                       0x00000002
 #define HTTP_POST                      0x00000008
@@ -103,12 +79,19 @@ typedef struct {
 #define RSP_INTERNAL_SERVER_ERROR       "500 Internal Server Error"
 #define RSP_HTTP_VERSION_NOT_SUPPORTED  "505 HTTP Version Not Supported"
 
+#define CONTENT_LENGTH "Content-Length"
+#define CONTENT_TYPE "Content-Type"
+#define CONNECTION "Connection"
 
-static void error(const char *str)
-{
-    perror(str);
-    exit(EXIT_FAILURE);
-};
+typedef unsigned char u_char;
+typedef unsigned int uint_t;
+typedef int int_t;
+typedef unsigned int uint32_t;
+
+typedef struct {
+    size_t len;
+    u_char *data;
+} str_t;
 
 typedef struct http_header_s {
     char const *key;
@@ -117,14 +100,14 @@ typedef struct http_header_s {
 } http_header_t;
 
 typedef struct http_response_s {
-    char *status;     /* the status code for response */
-    int pos;        /* the pos int buffer */
-    int work_state; /* write header or write body */
+    char *status;                   /* the status code for response */
+    int pos;                        /* the pos int buffer */
+    int work_state;                 /* write header or write body */
     http_header_t *headers;
     int header_length;
     char *body;
     int body_length;
-    int body_memop;      /* whether need to free the body */
+    int body_memop;                 /* whether need to free the body */
     struct http_response_s *next;
 } http_response_t;
 
@@ -132,7 +115,9 @@ typedef struct http_response_s {
 typedef struct http_request_s {
     int fd;
     int epfd;
-    u_char buf[BUFSIZE];    /* usef for request */
+
+    /* buf for read request */
+    u_char buf[BUFSIZE];   
     u_char *pos;
     u_char *last;
 
@@ -225,27 +210,10 @@ extern void do_respond(http_request_t *session);
 
 extern int atoi_hs(const char *start, const char *end);
 
-// static char ngx_http_error_494_page[] =
-// "<html>" CRLF
-// "<head><title>400 Request Header Or Cookie Too Large</title></head>"
-// CRLF
-// "<body>" CRLF
-// "<center><h1>400 Bad Request</h1></center>" CRLF
-// "<center>Request Header Or Cookie Too Large</center>" CRLF
-// ;
-
-
-
-// static char *http_error_page(const char * rsp_state)
-// {
-//     static char buf[256];
-//     int nwrite;
-//     nwrite = sprintf(buf, "<html>" CRLF
-//                         "<head><title>%s</title></head>" CRLF
-//                         "<body>" CRLF
-//                         "<center><h1>%s</h1></center>" CRLF, rsp_state, rsp_state);
-//     return buf;
-// }
-
+static void error(const char *str)
+{
+    perror(str);
+    exit(EXIT_FAILURE);
+};
 
 #endif

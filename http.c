@@ -106,16 +106,12 @@ void write_header_to_buffer(http_request_t *session, http_response_t *response)
     nwrite = sprintf(session->out_buf + offset, "HTTP/1.1 %s\r\n", response->status);
     offset += nwrite;
 
-
-    LOGD("begin to write header\n");
     while (header) {
         LOGD("%s: %s\r\n", header->key, header->value);
         nwrite = sprintf(session->out_buf + offset, "%s: %s\r\n", header->key, header->value);
         offset += nwrite;
         header = header->next;
     }
-    LOGD("after to write header\n");
-
 
     /* content-length */
     nwrite = sprintf(session->out_buf + offset, "Content-length: %d\r\n", response->body_length);
@@ -168,7 +164,6 @@ void send_response(http_request_t * session, http_response_t *curr_rsp)
             case WRITE_BODY:
             LOGD("write_body\n");
                 nwrite = write(session->fd, curr_rsp->body + curr_rsp->pos, curr_rsp->body_length - curr_rsp->pos);
-                // write(STDOUT_FILENO, curr_rsp->body + curr_rsp->pos, curr_rsp->body_length - curr_rsp->pos);
                 errno = 0;
                 if (nwrite < 0) {
                     if (errno == EAGAIN || errno == EWOULDBLOCK)
@@ -294,7 +289,7 @@ void add_sendfile_response(http_request_t *session, char *filename)
         session->responses->next = cresponse;
 }
 
-void add_error_response(http_request_t *session, char *rsp_state)
+void add_special_response(http_request_t *session, char *rsp_state)
 {
     http_response_t *cresponse;
     char *body;
@@ -340,21 +335,20 @@ int check_url(http_request_t *session)
     //     end = session->args_start;
 
     if (*start != '/') {
-        add_error_response(session, RSP_BAD_REQUEST);
+        add_special_response(session, RSP_BAD_REQUEST);
         return -1;
     }
         // return -1;
     
     for (p = start; p != end; ++p) {
         if (*p == '.' && *(p+1) == '.') {/* double dot .. */
-            add_error_response(session, RSP_BAD_REQUEST);
+            add_special_response(session, RSP_BAD_REQUEST);
             return -1;
         }
     }
 
     if (1 == end - start) {
-        // add_response(session, NULL, 0);
-        add_error_response(session, RSP_OK);
+        add_special_response(session, RSP_OK);
         return 0;
     }
     length = end - start;
@@ -370,7 +364,7 @@ int check_url(http_request_t *session)
         res = 0;
     }
     else {
-        add_error_response(session, RSP_NOT_FOUND);
+        add_special_response(session, RSP_NOT_FOUND);
         res = -1;
     }
     free(filename);
@@ -387,8 +381,7 @@ void do_request(http_request_t *session)
 
     parse_result = OK;
 
-    /* OK to end session */
-    if (session->state == PARSE_BEGIN && session->http_state == SESSION_END)
+    if (session->http_state == SESSION_END)
         return;
 
     if (session->buf + BUFSIZE <= session->last) /* full buf */ {
@@ -424,7 +417,7 @@ void do_request(http_request_t *session)
             if (parse_result == AGAIN) {
                 /* this case is that the shift can't help */
                 if (session->request_start == session->buf) {
-                    add_error_response(session, RSP_REQUEST_HEADER_FIELDS_TOO_LARGE);
+                    add_special_response(session, RSP_REQUEST_HEADER_FIELDS_TOO_LARGE);
                     session->http_state = SESSION_END;
                     return;
                 }
@@ -440,13 +433,11 @@ void do_request(http_request_t *session)
             fprintf(stderr, "port: %.*s\n", (int)(session->port_end - session->port_start), session->port_start);
             fprintf(stderr, "uri ext: %.*s\n", (int)(session->uri_end - session->uri_ext), session->uri_ext);
 
-            // check_url();
             session->parse_state = PARSE_HEADER;
             /* fall through */
         
         case PARSE_HEADER:
             parse_result = http_parse_header_lines(session);
-            // fprintf(stderr, "\nparse result is %d\n", parse_result);
             if (parse_result == AGAIN) {
                 session->parse_state = PARSE_HEADER;
                 shift_buf(session, session->header_name_start);
@@ -460,7 +451,6 @@ void do_request(http_request_t *session)
                     session->http_state = SESSION_END;
                     return;
                 }
-                // fprintf(stderr, "parse header finish\n");
                 // add_response(session, NULL, FREE_NONE);
                 // add_sendfile_response(session, NULL);
                 // add_error_response(session, RSP_HTTP_VERSION_NOT_SUPPORTED);
@@ -504,21 +494,4 @@ void do_request(http_request_t *session)
     }
 
     return;
-
-// close_out:
-//     if (req->responses == NULL) {
-//         fprintf(stderr, "response is null\n");
-//         // epoll_ctl(req->epfd, EPOLL_CTL_DEL, req->fd, NULL);
-//         close(req->fd);
-//         free(req);
-//     }
-//     else {
-//         // struct epoll_event event;
-//         // event.data.ptr = req;
-//         // event.events = EPOLLOUT;
-//         // epoll_ctl(req->epfd, EPOLL_CTL_MOD, req->fd, &event);
-//         fprintf(stderr, "shutdown read\n");
-//         shutdown(req->fd, SHUT_RD);
-//     }
-//     return;
 }
