@@ -932,3 +932,15 @@ int http_parse_header_lines(http_request_t *session)
     
     return res;
 }
+
+// int http_parse_url(http_request_t *session)
+// {
+//     u_char *p;
+//     enum {
+//         sw_state = 0,
+
+//     } state;
+
+//     state = session->state;
+//     for (p = session->uri_start)
+// }

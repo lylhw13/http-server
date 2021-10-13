@@ -162,13 +162,13 @@ typedef struct http_request_s {
     u_char                           *uri_start;
     u_char                           *uri_end;
     u_char                           *uri_ext;
-    u_char                           *args_start;
+    u_char                           *args_start;       /* url arguments */
     u_char                           *request_start;    /* request line start */
     u_char                           *request_end;      /* request line end */
     u_char                           *method_end;       /* method end */
     u_char                           *host_start;
     u_char                           *host_end;
-    u_char                           *port_start;
+    u_char                           *port_start;       /* url port start */
     u_char                           *port_end;
 
     unsigned                          http_minor:16;

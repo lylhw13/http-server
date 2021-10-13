@@ -348,8 +348,13 @@ void do_request(http_request_t *session)
                 return;
             }
 
-            // fprintf(stderr, "method: %.*s\n", (int)(session->method_end + 1 - session->request_start), session->request_start);
-            // fprintf(stderr, "uri: %.*s\n", (int)(session->uri_end + 1 - session->uri_start), session->uri_start);
+            fprintf(stderr, "method: %.*s\n", (int)(session->method_end + 1 - session->request_start), session->request_start);
+            fprintf(stderr, "uri: %.*s\n", (int)(session->uri_end + 1 - session->uri_start), session->uri_start);
+            fprintf(stderr, "args: %.*s\n", (int)(session->uri_end - session->args_start), session->args_start);
+            fprintf(stderr, "host: %.*s\n", (int)(session->host_end - session->host_start), session->host_start);
+            fprintf(stderr, "port: %.*s\n", (int)(session->port_end - session->port_start), session->port_start);
+            fprintf(stderr, "uri ext: %.*s\n", (int)(session->uri_end - session->uri_ext), session->uri_ext);
+
             check_url();
             session->parse_state = PARSE_HEADER;
             /* fall through */

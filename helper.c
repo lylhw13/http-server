@@ -36,3 +36,14 @@ int atoi_hs(const char *start, const char *end)
 
     return val;
 }
+
+void * xmalloc(size_t len)
+{
+    void *res;
+    res = malloc(len);
+    if (!res) {
+        perror("malloc");
+        exit(EXIT_FAILURE);
+    }
+    return res;
+}
