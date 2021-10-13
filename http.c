@@ -84,24 +84,8 @@ void free_response_list(http_response_t *response)
 
 void free_request(http_request_t *session)
 {
-    // free_response_list(session->responses);
+    free_response_list(session->responses);
 }
-
-// char *status_text(int status)
-// {
-//     switch (status)
-//     {   
-//     case 200:
-//         return "OK";
-//     case 301:
-//         return "Moved Permanently";
-//     case 404:
-//         return "NOT Found";    
-//     default:
-//         break;
-//     }
-//     return "";
-// }
 
 void write_header_to_buffer(http_request_t *session, http_response_t *response)
 {
@@ -109,8 +93,6 @@ void write_header_to_buffer(http_request_t *session, http_response_t *response)
     int offset = 0;
     int nwrite = 0;
     http_header_t *header = response->headers;
-    // nwrite = sprintf(session->out_buf + offset, "HTTP/1.1 %d %s\r\n", response->status, status_text(response->status));
-    // nwrite = sprintf(session->out_buf + offset, "HTTP/1.1 200 OK\r\n");
     nwrite = sprintf(session->out_buf + offset, "HTTP/1.1 %s\r\n", response->status);
     offset += nwrite;
 
@@ -262,6 +244,28 @@ void add_response(http_request_t *session, char *body, int memop)
         session->responses->next = cresponse;
 }
 
+void add_sendfile_response(http_request_t *session, char *filename)
+{
+    LOGD("add_response\n");
+    char *body = NULL;
+    // char *body = "<html><head>this is header </head><body><h1>this is body</h1><body></html>";
+    // if (!body)
+        body = "Hello, World!";
+    http_response_t *cresponse = (http_response_t*)malloc(sizeof(http_response_t));
+    if (cresponse == NULL)
+        perror("error cmalloc");
+    set_http_response_status(cresponse, RSP_OK);
+    // set_http_response_header(cresponse, "Content-type", "text/plain; charset=utf-8");
+    set_http_response_header(cresponse, "Content-Disposition","attachment; filename=\"hello.txt\"");
+    set_http_response_body(cresponse, body, strlen(body));
+    // cresponse->body_memop = memop;
+
+    if (session->responses == NULL)
+        session->responses = cresponse;
+    else 
+        session->responses->next = cresponse;
+}
+
 void add_error_response(http_request_t *session, char *rsp_state)
 {
     http_response_t *cresponse;
@@ -288,9 +292,59 @@ void add_error_response(http_request_t *session, char *rsp_state)
         session->responses->next = cresponse;
 }
 
-void check_url() 
+int check_url(http_request_t *session) 
 {
+    // fprintf(stderr, "uri_start %c\n", *session->uri_start);
+    // fprintf(stderr, "uri_end %c\n", *session->uri_end);
+    // fprintf(stderr, "uri_ext %c\n", *session->uri_ext);
+    // fprintf(stderr, "arg %c\n", *session->args_start);
+    // fprintf(stderr, "uri_start %c\n", *session->uri_start);
+    // fprintf(stderr, "uri_start %c\n", *session->uri_start);
+    // fprintf(stderr, "end - start is: %d\n", (int)(session->uri_end - session->uri_start));
 
+    int res, length;
+    u_char *p, *start, *end;
+    char *filename;
+
+    start = session->uri_start;
+    end = session->uri_end;
+    // if (session->args_start != NULL)
+    //     end = session->args_start;
+
+    if (*start != '/') {
+        add_error_response(session, RSP_BAD_REQUEST);
+        return -1;
+    }
+        // return -1;
+    
+    for (p = start; p != end; ++p) {
+        if (*p == '.' && *(p+1) == '.') {/* double dot .. */
+            add_error_response(session, RSP_BAD_REQUEST);
+            return -1;
+        }
+    }
+
+    if (1 == end - start) {
+        // add_response(session, NULL, 0);
+        add_error_response(session, RSP_OK);
+        return 0;
+    }
+    length = end - start;
+    filename = (char *)malloc(length + 1);
+    sprintf(filename, "%.*s", length, start);
+    filename[length] = '\0';
+
+    if (access(filename, R_OK) == 0) {
+        add_sendfile_response(session, filename);
+        res = 0;
+    }
+    else {
+        add_error_response(session, RSP_NOT_FOUND);
+        res = -1;
+    }
+    free(filename);
+
+    return res;
 }
 
 void do_request(http_request_t *session) 
@@ -355,7 +409,7 @@ void do_request(http_request_t *session)
             fprintf(stderr, "port: %.*s\n", (int)(session->port_end - session->port_start), session->port_start);
             fprintf(stderr, "uri ext: %.*s\n", (int)(session->uri_end - session->uri_ext), session->uri_ext);
 
-            check_url();
+            // check_url();
             session->parse_state = PARSE_HEADER;
             /* fall through */
         
@@ -371,8 +425,13 @@ void do_request(http_request_t *session)
 
         case PARSE_HEADER_DONE:
             if (session->method == HTTP_GET) {
+                if (check_url(session) != 0) {
+                    session->http_state = SESSION_END;
+                    return;
+                }
                 // fprintf(stderr, "parse header finish\n");
-                add_response(session, NULL, FREE_NONE);
+                // add_response(session, NULL, FREE_NONE);
+                // add_sendfile_response(session, NULL);
                 // add_error_response(session, RSP_HTTP_VERSION_NOT_SUPPORTED);
                 session->parse_state = PARSE_BEGIN;
                 if (session->keep_alive)
