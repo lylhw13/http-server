@@ -64,6 +64,7 @@ void shift_buf(http_request_t *session, u_char *position)
 
 void free_response(http_response_t *response)
 {
+    /* free header */
     http_header_t *curr = response->headers;
     while (curr) {
         response->headers = curr->next;
@@ -71,6 +72,11 @@ void free_response(http_response_t *response)
         curr = response->headers;       
     }   
     /* free body */
+    if (response->body_memop == FREE_MALLOC)
+        free(response->body);
+    else if(response->body_memop == FREE_MMAP)
+        munmap(response->body, response->body_length);
+    
     free(response);
     response = NULL;
 }
@@ -221,7 +227,7 @@ void set_http_response_header(http_response_t *response, char const *key, char c
     response->headers = curr_header;
 }
 
-void set_http_response_body(http_response_t *response, char const *body, int content_length)
+void set_http_response_body(http_response_t *response, char *body, int content_length)
 {
     response->body = body;
     response->body_length = content_length;
@@ -280,7 +286,7 @@ void add_sendfile_response(http_request_t *session, char *filename)
     }
 
     set_http_response_body(cresponse, body, size);
-    // cresponse->body_memop = memop;
+    cresponse->body_memop = FREE_MMAP;
 
     if (session->responses == NULL)
         session->responses = cresponse;

@@ -122,7 +122,7 @@ typedef struct http_response_s {
     int work_state; /* write header or write body */
     http_header_t *headers;
     int header_length;
-    char const *body;
+    char *body;
     int body_length;
     int body_memop;      /* whether need to free the body */
     struct http_response_s *next;
