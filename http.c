@@ -6,6 +6,10 @@
 #include <errno.h>
 #include <sys/epoll.h>
 #include <assert.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+
 
 int create_and_bind(const char* port) 
 {
@@ -246,18 +250,36 @@ void add_response(http_request_t *session, char *body, int memop)
 
 void add_sendfile_response(http_request_t *session, char *filename)
 {
-    LOGD("add_response\n");
-    char *body = NULL;
-    // char *body = "<html><head>this is header </head><body><h1>this is body</h1><body></html>";
-    // if (!body)
-        body = "Hello, World!";
+    LOGD("add_sendfile_response\n");
+    int fd;
+    struct stat st;
+    size_t size;
+    char *body;
+    
     http_response_t *cresponse = (http_response_t*)malloc(sizeof(http_response_t));
     if (cresponse == NULL)
         perror("error cmalloc");
     set_http_response_status(cresponse, RSP_OK);
-    // set_http_response_header(cresponse, "Content-type", "text/plain; charset=utf-8");
-    set_http_response_header(cresponse, "Content-Disposition","attachment; filename=\"hello.txt\"");
-    set_http_response_body(cresponse, body, strlen(body));
+    set_http_response_header(cresponse, "Content-Disposition","attachment; filename=\"this_is_filename\"");
+
+    body = MAP_FAILED;
+    fd = open(filename, O_RDONLY);
+    if (fd < 0) {
+        perror("open");
+        exit(EXIT_FAILURE);
+    }
+    errno = 0;
+    if (!fstat(fd, &st)) {
+        size = st.st_size;
+        body = mmap(NULL, size, PROT_READ, MAP_PRIVATE,fd, 0);
+    }
+    close(fd);
+    if (body == MAP_FAILED) {
+        LOGD("%s mmap error %s\n", filename, strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+
+    set_http_response_body(cresponse, body, size);
     // cresponse->body_memop = memop;
 
     if (session->responses == NULL)
@@ -330,9 +352,12 @@ int check_url(http_request_t *session)
         return 0;
     }
     length = end - start;
-    filename = (char *)malloc(length + 1);
-    sprintf(filename, "%.*s", length, start);
-    filename[length] = '\0';
+    filename = (char *)malloc(length + 2);
+    filename[0] = '.';
+    sprintf(filename + 1, "%.*s", length, start);
+    filename[length + 1] = '\0';
+
+    fprintf(stderr, "filename is %s\n", filename);
 
     if (access(filename, R_OK) == 0) {
         add_sendfile_response(session, filename);
