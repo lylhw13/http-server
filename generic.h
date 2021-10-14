@@ -195,9 +195,9 @@ struct http_buf {
 };
 
 extern int http_parse_request_line(http_request_t *r);
-extern int_t ngx_http_parse_header_line(http_request_t *r, uint_t allow_underscores);
+extern int_t http_parse_header_line(http_request_t *r, uint_t allow_underscores);
 
-extern int http_parse_header_lines(http_request_t *r); 
+extern int http_parse_headers(http_request_t *r); 
 
 
 extern int create_and_bind(const char* port);

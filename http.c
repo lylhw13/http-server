@@ -437,7 +437,7 @@ void do_request(http_request_t *session)
             /* fall through */
         
         case PARSE_HEADER:
-            parse_result = http_parse_header_lines(session);
+            parse_result = http_parse_headers(session);
             if (parse_result == AGAIN) {
                 session->parse_state = PARSE_HEADER;
                 shift_buf(session, session->header_name_start);

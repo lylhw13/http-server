@@ -7,16 +7,6 @@
 #include "generic.h"
 #include <string.h>
 
-int ngx_hash(int a, int b)
-{
-    return 0;
-}
-
-int ngx_strncmp(char *a, char *b, int c)
-{   
-    return 0;
-}
-
 static uint32_t  usual[] = {
     0x00000000, /* 0000 0000 0000 0000  0000 0000 0000 0000 */
 
@@ -24,11 +14,8 @@ static uint32_t  usual[] = {
     0x7fff37d6, /* 0111 1111 1111 1111  0011 0111 1101 0110 */
 
                 /* _^]\ [ZYX WVUT SRQP  ONML KJIH GFED CBA@ */
-#if (NGX_WIN32)
-    0xefffffff, /* 1110 1111 1111 1111  1111 1111 1111 1111 */
-#else
+
     0xffffffff, /* 1111 1111 1111 1111  1111 1111 1111 1111 */
-#endif
 
                 /*  ~}| {zyx wvut srqp  onml kjih gfed cba` */
     0x7fffffff, /* 0111 1111 1111 1111  1111 1111 1111 1111 */
@@ -202,12 +189,6 @@ http_parse_request_line(http_request_t *r)
                 state = sw_uri;
                 break;
             case ' ':
-                /*
-                 * use single "/" from request line to preserve pointers,
-                 * if request line will be copied to large client buffer
-                 */
-                // r->uri_start = r->schema_end + 1;
-                // r->uri_end = r->schema_end + 2;
                 state = sw_http_09;
                 break;
             default:
@@ -276,12 +257,6 @@ http_parse_request_line(http_request_t *r)
                 break;
             case ' ':
                 r->port_end = p;
-                /*
-                 * use single "/" from request line to preserve pointers,
-                 * if request line will be copied to large client buffer
-                 */
-                // r->uri_start = r->schema_end + 1;
-                // r->uri_end = r->schema_end + 2;
                 state = sw_http_09;
                 break;
             default:
@@ -610,7 +585,7 @@ done:
 
 
 int_t
-ngx_http_parse_header_line(http_request_t *r, uint_t allow_underscores)
+http_parse_header_line(http_request_t *r, uint_t allow_underscores)
 {
     u_char      c, ch, *p;
     uint_t  hash, i;
@@ -665,7 +640,6 @@ ngx_http_parse_header_line(http_request_t *r, uint_t allow_underscores)
                 c = lowcase[ch];
 
                 if (c) {
-                    // hash = ngx_hash(0, c);
                     r->lowcase_header[0] = c;
                     i = 1;
                     break;
@@ -673,7 +647,6 @@ ngx_http_parse_header_line(http_request_t *r, uint_t allow_underscores)
 
                 if (ch == '_') {
                     if (allow_underscores) {
-                        // hash = ngx_hash(0, ch);
                         r->lowcase_header[0] = ch;
                         i = 1;
 
@@ -705,7 +678,6 @@ ngx_http_parse_header_line(http_request_t *r, uint_t allow_underscores)
             c = lowcase[ch];
 
             if (c) {
-                hash = ngx_hash(hash, c);
                 r->lowcase_header[i++] = c;
                 i &= (HTTP_LC_HEADER_LEN - 1);
                 break;
@@ -713,7 +685,6 @@ ngx_http_parse_header_line(http_request_t *r, uint_t allow_underscores)
 
             if (ch == '_') {
                 if (allow_underscores) {
-                    hash = ngx_hash(hash, ch);
                     r->lowcase_header[i++] = ch;
                     i &= (HTTP_LC_HEADER_LEN - 1);
 
@@ -743,15 +714,6 @@ ngx_http_parse_header_line(http_request_t *r, uint_t allow_underscores)
                 r->header_start = p;
                 r->header_end = p;
                 goto done;
-            }
-
-            /* IIS may send the duplicate "HTTP/1.1 ..." lines */
-            if (ch == '/'
-                && p - r->header_name_start == 4
-                && ngx_strncmp(r->header_name_start, "HTTP", 4) == 0)
-            {
-                state = sw_ignore_line;
-                break;
             }
 
             if (ch <= 0x20 || ch == 0x7f) {
@@ -884,13 +846,13 @@ header_done:
     return HTTP_PARSE_HEADER_DONE;
 }
 
-int http_parse_header_lines(http_request_t *session) 
+int http_parse_headers(http_request_t *session) 
 {
     int_t  res;
     int i;
 
     for (;;) {
-        res = ngx_http_parse_header_line(session, 1);
+        res = http_parse_header_line(session, 1);
         if (res == HTTP_PARSE_INVALID_HEADER) {
             fprintf(stderr, "invalid");
             return res;
@@ -932,15 +894,3 @@ int http_parse_header_lines(http_request_t *session)
     
     return res;
 }
-
-// int http_parse_url(http_request_t *session)
-// {
-//     u_char *p;
-//     enum {
-//         sw_state = 0,
-
-//     } state;
-
-//     state = session->state;
-//     for (p = session->uri_start)
-// }
