@@ -31,11 +31,28 @@
 #define HTTP_GET                       0x00000002
 #define HTTP_POST                      0x00000004
 
+/* request parse state */
 #define PARSE_BEGIN 0
 #define PARSE_HEADER 1
 #define PARSE_HEADER_DONE 2
 #define PARSE_BODY 3
 
+/* response write state */
+#define WRITE_BEGIN 0
+#define WRITE_HEADER 1
+#define WRITE_BODY 2
+
+/* connection state */
+#define SESSION_INIT 0 
+#define SESSION_READ 1
+#define SESSION_END 2
+
+/* whether need to free body */
+#define FREE_NONE 0
+#define FREE_MALLOC 1
+#define FREE_MMAP 2
+
+/* state for parse http parse line */
 #define HTTP_PARSE_HEADER_DONE         1
 #define HTTP_PARSE_INVALID_METHOD      2
 #define HTTP_PARSE_INVALID_REQUEST     3
@@ -48,21 +65,6 @@
 #define AGAIN -2
 
 #define HTTP_LC_HEADER_LEN 32
-
-#define RESPONSE_IN 0
-#define RESPONSE_END 1
-
-#define WRITE_BEGIN 0
-#define WRITE_HEADER 1
-#define WRITE_BODY 2
-
-#define SESSION_INIT 0 
-#define SESSION_READ 1
-#define SESSION_END 2
-
-#define FREE_NONE 0
-#define FREE_MALLOC 1
-#define FREE_MMAP 2
 
 /* respond */
 #define RSP_OK                              "200 OK"
@@ -83,7 +85,6 @@
 
 typedef unsigned char u_char;
 typedef unsigned int uint_t;
-typedef int int_t;
 typedef unsigned int uint32_t;
 
 typedef struct {
@@ -184,9 +185,8 @@ typedef struct http_request_s {
 extern int http_parse_request_line(http_request_t *r);
 extern int http_parse_headers(http_request_t *r); 
 
+/* http */
 extern int create_and_bind(const char* port);
-
-extern void shift_buf(http_request_t *session, u_char *target);
 extern void do_request(http_request_t *session);
 extern void do_respond(http_request_t *session);
 

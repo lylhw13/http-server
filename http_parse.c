@@ -836,8 +836,7 @@ header_done:
 
 int http_parse_headers(http_request_t *session) 
 {
-    int_t  res;
-    int i;
+    int  res;
 
     for (;;) {
         res = http_parse_header_line(session, 1);

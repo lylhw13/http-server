@@ -199,8 +199,6 @@ void do_respond(http_request_t *session)
     }
 
     if (session->http_state == SESSION_END) {
-        // fprintf(stderr, "respond end\n");
-        // epoll_ctl(session->epfd, EPOLL_CTL_DEL, session->fd, NULL);
         close(session->fd); /* epoll will auto remove when fd is close */
         free(session);
     }
@@ -383,7 +381,6 @@ void do_request(http_request_t *session)
 
     len =  (session->buf + BUFSIZE) - session->last;
     nread = read(session->fd, session->last, (session->buf + BUFSIZE) - session->last);
-    // fprintf(stderr, "\nlen is %d, read is %d\n", (int)len, (int)nread);
     if (nread < 0) {
         if (errno == EAGAIN || errno == EWOULDBLOCK)
             return;
@@ -398,8 +395,6 @@ void do_request(http_request_t *session)
     }
 
     session->last = session->last + nread;
-    // fprintf(stderr, "last is %d\n", (int)(req->last - req->buf));
-    // fprintf(stdout, "pos to last\n%.*s\n", (int)(req->last - req->pos), req->pos);
 
     while (session->pos < session->last) {
         switch (session->parse_state)
@@ -419,12 +414,18 @@ void do_request(http_request_t *session)
                 return;
             }
 
-            fprintf(stderr, "method: %.*s\n", (int)(session->method_end + 1 - session->request_start), session->request_start);
-            fprintf(stderr, "uri: %.*s\n", (int)(session->uri_end + 1 - session->uri_start), session->uri_start);
-            fprintf(stderr, "args: %.*s\n", (int)(session->uri_end - session->args_start), session->args_start);
-            fprintf(stderr, "host: %.*s\n", (int)(session->host_end - session->host_start), session->host_start);
-            fprintf(stderr, "port: %.*s\n", (int)(session->port_end - session->port_start), session->port_start);
-            fprintf(stderr, "uri ext: %.*s\n", (int)(session->uri_end - session->uri_ext), session->uri_ext);
+            if (parse_result < 0) {
+                add_special_response(session, RSP_BAD_REQUEST);
+                session->http_state = SESSION_END;
+                return;
+            }
+
+            // fprintf(stderr, "method: %.*s\n", (int)(session->method_end + 1 - session->request_start), session->request_start);
+            // fprintf(stderr, "uri: %.*s\n", (int)(session->uri_end + 1 - session->uri_start), session->uri_start);
+            // fprintf(stderr, "args: %.*s\n", (int)(session->uri_end - session->args_start), session->args_start);
+            // fprintf(stderr, "host: %.*s\n", (int)(session->host_end - session->host_start), session->host_start);
+            // fprintf(stderr, "port: %.*s\n", (int)(session->port_end - session->port_start), session->port_start);
+            // fprintf(stderr, "uri ext: %.*s\n", (int)(session->uri_end - session->uri_ext), session->uri_ext);
 
             session->parse_state = PARSE_HEADER;
             /* fall through */
