@@ -287,7 +287,6 @@ http_parse_request_line(http_request_t *r)
                 r->http_minor = 9;
                 goto done;
             case '.':
-                r->complex_uri = 1;
                 state = sw_uri;
                 break;
             case '%':
@@ -295,7 +294,6 @@ http_parse_request_line(http_request_t *r)
                 state = sw_uri;
                 break;
             case '/':
-                r->complex_uri = 1;
                 state = sw_uri;
                 break;
             case '?':
@@ -303,11 +301,7 @@ http_parse_request_line(http_request_t *r)
                 state = sw_uri;
                 break;
             case '#':
-                r->complex_uri = 1;
                 state = sw_uri;
-                break;
-            case '+':
-                r->plus_in_uri = 1;
                 break;
             default:
                 if (ch < 0x20 || ch == 0x7f) {
@@ -355,11 +349,7 @@ http_parse_request_line(http_request_t *r)
                 state = sw_uri;
                 break;
             case '#':
-                r->complex_uri = 1;
                 state = sw_uri;
-                break;
-            case '+':
-                r->plus_in_uri = 1;
                 break;
             default:
                 if (ch < 0x20 || ch == 0x7f) {
@@ -391,7 +381,6 @@ http_parse_request_line(http_request_t *r)
                 r->http_minor = 9;
                 goto done;
             case '#':
-                r->complex_uri = 1;
                 break;
             default:
                 if (ch < 0x20 || ch == 0x7f) {
@@ -584,8 +573,7 @@ done:
 
 
 
-int_t
-http_parse_header_line(http_request_t *r, uint_t allow_underscores)
+int http_parse_header_line(http_request_t *r, uint_t allow_underscores)
 {
     u_char      c, ch, *p;
     uint_t  hash, i;
@@ -858,11 +846,9 @@ int http_parse_headers(http_request_t *session)
             return res;
         }
         if (res == HTTP_PARSE_HEADER_DONE) {
-            // fputs("DONE......................", stderr);
             return res;
         }
         if (res == AGAIN) {
-            // fputs("AGAIN......................", stderr);
             return res;
         }
         if (res == OK) {

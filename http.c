@@ -317,13 +317,6 @@ void add_special_response(http_request_t *session, char *rsp_state)
 
 int check_url(http_request_t *session) 
 {
-    // fprintf(stderr, "uri_start %c\n", *session->uri_start);
-    // fprintf(stderr, "uri_end %c\n", *session->uri_end);
-    // fprintf(stderr, "uri_ext %c\n", *session->uri_ext);
-    // fprintf(stderr, "arg %c\n", *session->args_start);
-    // fprintf(stderr, "uri_start %c\n", *session->uri_start);
-    // fprintf(stderr, "uri_start %c\n", *session->uri_start);
-    // fprintf(stderr, "end - start is: %d\n", (int)(session->uri_end - session->uri_start));
 
     int res, length;
     u_char *p, *start, *end;

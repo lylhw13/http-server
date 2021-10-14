@@ -26,9 +26,10 @@
 #define LOGD(...) ((void)fprintf(stdout, __VA_ARGS__))
 #define LOGE(...) ((void)fprintf(stderr, __VA_ARGS__))
 
+/* support method of HTTP */
 #define HTTP_UNKNOWN                   0x00000001
 #define HTTP_GET                       0x00000002
-#define HTTP_POST                      0x00000008
+#define HTTP_POST                      0x00000004
 
 #define PARSE_BEGIN 0
 #define PARSE_HEADER 1
@@ -36,14 +37,11 @@
 #define PARSE_BODY 3
 
 #define HTTP_PARSE_HEADER_DONE         1
-
-#define HTTP_CLIENT_ERROR              10
-#define HTTP_PARSE_INVALID_METHOD      10
-#define HTTP_PARSE_INVALID_REQUEST     11
-#define HTTP_PARSE_INVALID_VERSION     12
-#define HTTP_PARSE_INVALID_09_METHOD   13
-
-#define HTTP_PARSE_INVALID_HEADER      14
+#define HTTP_PARSE_INVALID_METHOD      2
+#define HTTP_PARSE_INVALID_REQUEST     3
+#define HTTP_PARSE_INVALID_VERSION     4
+#define HTTP_PARSE_INVALID_09_METHOD   5
+#define HTTP_PARSE_INVALID_HEADER      6
 
 #define OK 0
 #define ERROR -1
@@ -67,17 +65,17 @@
 #define FREE_MMAP 2
 
 /* respond */
-#define RSP_OK                          "200 OK"
-#define RSP_BAD_REQUEST                 "400 Bad Request"
-#define RSP_NOT_FOUND                   "404 Not found"
-#define RSP_METHOD_NOT_ALLOWED          "405 Method Not Allowed"
-#define RSP_REQUEST_TIMEOUT             "408 Request Timeout"
-#define RSP_LENGTH_REQUIRED             "411 Length Required"
-#define RSP_PAYLOAD_TOO_LARGE           "413 Payload Too Large"
-#define RSP_URI_TOO_LONG                "414 URI Too Long"
+#define RSP_OK                              "200 OK"
+#define RSP_BAD_REQUEST                     "400 Bad Request"
+#define RSP_NOT_FOUND                       "404 Not found"
+#define RSP_METHOD_NOT_ALLOWED              "405 Method Not Allowed"
+#define RSP_REQUEST_TIMEOUT                 "408 Request Timeout"
+#define RSP_LENGTH_REQUIRED                 "411 Length Required"
+#define RSP_PAYLOAD_TOO_LARGE               "413 Payload Too Large"
+#define RSP_URI_TOO_LONG                    "414 URI Too Long"
 #define RSP_REQUEST_HEADER_FIELDS_TOO_LARGE "431 Request Header Fields Too Large"
-#define RSP_INTERNAL_SERVER_ERROR       "500 Internal Server Error"
-#define RSP_HTTP_VERSION_NOT_SUPPORTED  "505 HTTP Version Not Supported"
+#define RSP_INTERNAL_SERVER_ERROR           "500 Internal Server Error"
+#define RSP_HTTP_VERSION_NOT_SUPPORTED      "505 HTTP Version Not Supported"
 
 #define CONTENT_LENGTH "Content-Length"
 #define CONTENT_TYPE "Content-Type"
@@ -166,19 +164,12 @@ typedef struct http_request_s {
     unsigned                          subrequests:8;
     unsigned                          blocked:8;
 
-    unsigned                          aio:1;
-
     unsigned keep_alive:1;
     uint_t content_length;
 
-    /* URI with "/." and on Win32 with "//" */
-    unsigned                          complex_uri:1;
 
     /* URI with "%" */
     unsigned                          quoted_uri:1;
-
-    /* URI with "+" */
-    unsigned                          plus_in_uri:1;
 
     /* URI with empty path */
     unsigned                          empty_path_in_uri:1;
@@ -189,31 +180,19 @@ typedef struct http_request_s {
 
 } http_request_t;
 
-struct http_buf {
-    u_char *pos;
-    u_char *last;
-};
-
+/* http parse */
 extern int http_parse_request_line(http_request_t *r);
-extern int_t http_parse_header_line(http_request_t *r, uint_t allow_underscores);
-
 extern int http_parse_headers(http_request_t *r); 
-
 
 extern int create_and_bind(const char* port);
 
 extern void shift_buf(http_request_t *session, u_char *target);
-extern void do_response_old(http_request_t *session);
 extern void do_request(http_request_t *session);
-
 extern void do_respond(http_request_t *session);
 
+/* helper */
 extern int atoi_hs(const char *start, const char *end);
+extern void error(const char *str);
 
-static void error(const char *str)
-{
-    perror(str);
-    exit(EXIT_FAILURE);
-};
 
 #endif

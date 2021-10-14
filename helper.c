@@ -47,3 +47,9 @@ void * xmalloc(size_t len)
     }
     return res;
 }
+
+void error(const char *str)
+{
+    perror(str);
+    exit(EXIT_FAILURE);
+};
