@@ -141,7 +141,7 @@ void send_response(http_request_t * session, http_response_t *curr_rsp)
                 write_header_to_buffer(session, curr_rsp);
                 curr_rsp->pos = 0;
                 curr_rsp->work_state = WRITE_HEADER;
-                //fall through
+                /* fall through */
             case WRITE_HEADER:
             LOGD("write_header\n");
                 nwrite = write(session->fd, session->out_buf + curr_rsp->pos, curr_rsp->header_length - curr_rsp->pos);
@@ -230,7 +230,6 @@ void set_http_response_body(http_response_t *response, char *body, int content_l
 void add_response(http_request_t *session, char *body, int memop)
 {
     LOGD("add_response\n");
-    // char *body = "<html><head>this is header </head><body><h1>this is body</h1><body></html>";
     if (!body)
         body = "Hello, World!";
     http_response_t *cresponse = (http_response_t*)malloc(sizeof(http_response_t));
@@ -322,14 +321,11 @@ int check_url(http_request_t *session)
 
     start = session->uri_start;
     end = session->uri_end;
-    // if (session->args_start != NULL)
-    //     end = session->args_start;
 
     if (*start != '/') {
         add_special_response(session, RSP_BAD_REQUEST);
         return -1;
     }
-        // return -1;
     
     for (p = start; p != end; ++p) {
         if (*p == '.' && *(p+1) == '.') {/* double dot .. */
@@ -375,7 +371,8 @@ void do_request(http_request_t *session)
     if (session->http_state == SESSION_END)
         return;
 
-    if (session->buf + BUFSIZE <= session->last) /* full buf */ {
+    /* full buf */
+    if (session->buf + BUFSIZE <= session->last)  {
         return;
     }
 
@@ -387,7 +384,6 @@ void do_request(http_request_t *session)
     }
 
     if (nread <= 0) {
-        // LOGE("connect close. clear\n");
         epoll_ctl(session->epfd, EPOLL_CTL_DEL, session->fd, NULL);
         close(session->fd);
         free(session);
@@ -420,13 +416,6 @@ void do_request(http_request_t *session)
                 return;
             }
 
-            // fprintf(stderr, "method: %.*s\n", (int)(session->method_end + 1 - session->request_start), session->request_start);
-            // fprintf(stderr, "uri: %.*s\n", (int)(session->uri_end + 1 - session->uri_start), session->uri_start);
-            // fprintf(stderr, "args: %.*s\n", (int)(session->uri_end - session->args_start), session->args_start);
-            // fprintf(stderr, "host: %.*s\n", (int)(session->host_end - session->host_start), session->host_start);
-            // fprintf(stderr, "port: %.*s\n", (int)(session->port_end - session->port_start), session->port_start);
-            // fprintf(stderr, "uri ext: %.*s\n", (int)(session->uri_end - session->uri_ext), session->uri_ext);
-
             session->parse_state = PARSE_HEADER;
             /* fall through */
         
@@ -445,9 +434,6 @@ void do_request(http_request_t *session)
                     session->http_state = SESSION_END;
                     return;
                 }
-                // add_response(session, NULL, FREE_NONE);
-                // add_sendfile_response(session, NULL);
-                // add_error_response(session, RSP_HTTP_VERSION_NOT_SUPPORTED);
                 session->parse_state = PARSE_BEGIN;
                 if (session->keep_alive)
                     continue;

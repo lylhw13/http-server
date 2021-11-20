@@ -4,12 +4,12 @@ CC=gcc
 LIBS = 
 
 
-PROG = http_server
+PROG = http-server
 
 all: $(PROG)
 
-http_server: generic.h helper.c http.c http_parse.c main.c 
-	$(CC) $(CFLAG) -o http_server generic.h helper.c http.c http_parse.c main.c $(LIBS)
+$(PROG): generic.h helper.c http.c http-parse.c main.c 
+	$(CC) $(CFLAG) $^ -o $@ $(LIBS)
 
 clean:
 	rm $(PROG)

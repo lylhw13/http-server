@@ -1,7 +1,6 @@
 
-/*
- * Copyright (C) Igor Sysoev
- * Copyright (C) Nginx, Inc.
+/* 
+ * The http-parse.c is modified base on nginx.
  */
 
 #include "generic.h"
