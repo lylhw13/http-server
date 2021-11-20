@@ -23,7 +23,7 @@ int create_and_bind(const char* port)
     hints.ai_flags = AI_PASSIVE;
 
     if ((ecode = getaddrinfo(NULL, port, &hints, &result))) {
-        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(ecode));
+        LOGE("getaddrinfo: %s\n", gai_strerror(ecode));
         exit(EXIT_FAILURE);
     }
 
@@ -128,7 +128,7 @@ void write_header_to_buffer(http_request_t *session, http_response_t *response)
     response->header_length = offset;
 
     LOGD("write_header_to_buffer\n");
-    fprintf(stderr, session->out_buf, offset);
+    LOGD(session->out_buf, offset);
 }
 
 void send_response(http_request_t * session, http_response_t *curr_rsp)
@@ -344,7 +344,7 @@ int check_url(http_request_t *session)
     sprintf(filename + 1, "%.*s", length, start);
     filename[length + 1] = '\0';
 
-    fprintf(stderr, "filename is %s\n", filename);
+    LOGD("filename is %s\n", filename);
 
     if (access(filename, R_OK) == 0) {
         add_sendfile_response(session, filename);

@@ -21,11 +21,6 @@
 #define CR (char)'\r'
 #define CRLF "\r\n"
 
-// #ifdef DEBUG
-    #define LOGD(...) ((void)fprintf(stdout, __VA_ARGS__))
-    #define LOGE(...) ((void)fprintf(stderr, __VA_ARGS__))
-// #endif
-
 /* support method of HTTP */
 #define HTTP_UNKNOWN                   0x00000001
 #define HTTP_GET                       0x00000002
@@ -82,6 +77,16 @@
 #define CONTENT_LENGTH "Content-Length"
 #define CONTENT_TYPE "Content-Type"
 #define CONNECTION "Connection"
+
+#ifdef DEBUG
+    #define LOGD(...) ((void)fprintf(stdout, __VA_ARGS__))
+#else
+    #define LOGD(...) 
+#endif
+
+#define LOGE(...) ((void)fprintf(stderr, __VA_ARGS__))
+
+
 
 // typedef char char;
 typedef unsigned int uint_t;

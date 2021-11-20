@@ -24,12 +24,12 @@ int atoi_hs(const char *start, const char *end)
     }
 
     if (endptr == str) {
-        fprintf(stderr, "No digits were found\n");
+        LOGE("No digits were found\n");
         return -1;
     }
 
     if (*endptr != '\0') {
-        printf("Further characters after number: %s\n", endptr);
+        LOGE("Further characters after number: %s\n", endptr);
         return -1;
     }       
 
