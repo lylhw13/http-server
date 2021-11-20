@@ -40,7 +40,7 @@ static uint32_t  usual[] = {
 int
 http_parse_request_line(http_request_t *r)
 {
-    u_char  c, ch, *p, *m;
+    char  c, ch, *p, *m;
     enum {
         sw_start = 0,
         sw_method,
@@ -574,7 +574,7 @@ done:
 
 int http_parse_header_line(http_request_t *r, uint_t allow_underscores)
 {
-    u_char      c, ch, *p;
+    char      c, ch, *p;
     uint_t  hash, i;
     enum {
         sw_start = 0,
@@ -589,7 +589,7 @@ int http_parse_header_line(http_request_t *r, uint_t allow_underscores)
 
     /* the last '\0' is not needed because string is zero terminated */
 
-    static u_char  lowcase[] =
+    static char  lowcase[] =
         "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
         "\0\0\0\0\0\0\0\0\0\0\0\0\0-\0\0" "0123456789\0\0\0\0\0\0"
         "\0abcdefghijklmnopqrstuvwxyz\0\0\0\0\0"
@@ -624,7 +624,7 @@ int http_parse_header_line(http_request_t *r, uint_t allow_underscores)
             default:
                 state = sw_name;
 
-                c = lowcase[ch];
+                c = lowcase[(int)ch];
 
                 if (c) {
                     r->lowcase_header[0] = c;
@@ -662,7 +662,7 @@ int http_parse_header_line(http_request_t *r, uint_t allow_underscores)
 
         /* header name */
         case sw_name:
-            c = lowcase[ch];
+            c = lowcase[(int)ch];
 
             if (c) {
                 r->lowcase_header[i++] = c;
@@ -850,10 +850,6 @@ int http_parse_headers(http_request_t *session)
             return res;
         }
         if (res == OK) {
-            // fputs(".OK.....................", stderr);
-            // fprintf(stderr, "%.*s:", (int)(session->header_name_end - session->header_name_start), session->header_name_start);
-            // fprintf(stderr, "%.*s\n", (int)(session->header_end - session->header_start), session->header_start);
-
             /* parse connection */
             if (strlen(CONNECTION) == (session->header_name_end - session->header_name_start) && 
                 !strncasecmp(session->header_name_start, CONNECTION, strlen(CONNECTION))) {

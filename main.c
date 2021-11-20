@@ -17,19 +17,19 @@
 #define MAX_EVENTS 64
 
 
-static struct option const longopts[] = 
-{
-    {"listen",  no_argument,       0, 'l'},   
-    {"aes",     no_argument,       0, 's'},
-};
+// static struct option const longopts[] = 
+// {
+//     {"listen",  no_argument,       0, 'l'},   
+//     {"aes",     no_argument,       0, 's'},
+// };
 
-void usage(int state)
-{
-    fprintf(stderr, 
-        "usage: ncs [-s passwd] -l port\n"
-        "       ncs [-s passwd] host port\n");
-    exit(state);
-}
+// void usage(int state)
+// {
+//     fprintf(stderr, 
+//         "usage: ncs [-s passwd] -l port\n"
+//         "       ncs [-s passwd] host port\n");
+//     exit(state);
+// }
 
 void setnonblocking(int fd)
 {
@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
 {    
     char *port = "33333";
     int listenfd;
-    int currfd;
+    // int currfd;
     int epfd;
 
     struct sockaddr_storage cliaddr;
@@ -54,8 +54,8 @@ int main(int argc, char *argv[])
     int connfd;
     struct epoll_event event, *events;
     int nr_events, i;
-    int nread;
-    char buf[BUFSIZ];
+    // int nread;
+    // char buf[BUFSIZ];
 
     listenfd = create_and_bind(port);
     LOGD("listen fd %d\n", listenfd);
@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
 
                 // LOGD("listen: connect %d\n", connfd);
                 if (connfd > 0) {
-                    int opt;
+                    // int opt;
                     setnonblocking(connfd);
 
                     http_request_t *ptr = (http_request_t *)malloc(sizeof(http_request_t));

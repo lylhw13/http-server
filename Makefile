@@ -1,5 +1,5 @@
-CFLAG=-g 
 CC=gcc
+CFLAG=-g -Wall
 
 LIBS = 
 

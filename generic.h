@@ -1,8 +1,6 @@
 #ifndef GENERIC_H
 #define GENERIC_H
 
-// #include "list.h"
-
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -19,12 +17,14 @@
     typeof(b) _b = b;  \
     _a > _b?_a:_b;})
 
-#define LF (u_char)'\n'
-#define CR (u_char)'\r'
+#define LF (char)'\n'
+#define CR (char)'\r'
 #define CRLF "\r\n"
 
-#define LOGD(...) ((void)fprintf(stdout, __VA_ARGS__))
-#define LOGE(...) ((void)fprintf(stderr, __VA_ARGS__))
+// #ifdef DEBUG
+    #define LOGD(...) ((void)fprintf(stdout, __VA_ARGS__))
+    #define LOGE(...) ((void)fprintf(stderr, __VA_ARGS__))
+// #endif
 
 /* support method of HTTP */
 #define HTTP_UNKNOWN                   0x00000001
@@ -83,13 +83,13 @@
 #define CONTENT_TYPE "Content-Type"
 #define CONNECTION "Connection"
 
-typedef unsigned char u_char;
+// typedef char char;
 typedef unsigned int uint_t;
 typedef unsigned int uint32_t;
 
 typedef struct {
     size_t len;
-    u_char *data;
+    char *data;
 } str_t;
 
 typedef struct http_header_s {
@@ -116,12 +116,12 @@ typedef struct http_request_s {
     int epfd;
 
     /* buf for read request */
-    u_char buf[BUFSIZE];   
-    u_char *pos;
-    u_char *last;
+    char buf[BUFSIZE];   
+    char *pos;
+    char *last;
 
 
-    u_char out_buf[BUFSIZE];    /* used to response header */
+    char out_buf[BUFSIZE];    /* used to response header */
     http_response_t* responses; /* list of response */
     
     /* state for HTTP request line and  HTTP headers */
@@ -135,25 +135,25 @@ typedef struct http_request_s {
 
     uint_t                        header_hash;
     uint_t                        lowcase_index;
-    u_char                            lowcase_header[HTTP_LC_HEADER_LEN];
+    char                            lowcase_header[HTTP_LC_HEADER_LEN];
 
-    u_char                           *header_name_start;
-    u_char                           *header_name_end;
-    u_char                           *header_start;
-    u_char                           *header_end;
+    char                           *header_name_start;
+    char                           *header_name_end;
+    char                           *header_start;
+    char                           *header_end;
 
     /* used to parse HTTP request line */
-    u_char                           *uri_start;
-    u_char                           *uri_end;
-    u_char                           *uri_ext;
-    u_char                           *args_start;       /* url arguments */
-    u_char                           *request_start;    /* request line start */
-    u_char                           *request_end;      /* request line end */
-    u_char                           *method_end;       /* method end */
-    u_char                           *host_start;
-    u_char                           *host_end;
-    u_char                           *port_start;       /* url port start */
-    u_char                           *port_end;
+    char                           *uri_start;
+    char                           *uri_end;
+    char                           *uri_ext;
+    char                           *args_start;       /* url arguments */
+    char                           *request_start;    /* request line start */
+    char                           *request_end;      /* request line end */
+    char                           *method_end;       /* method end */
+    char                           *host_start;
+    char                           *host_end;
+    char                           *port_start;       /* url port start */
+    char                           *port_end;
 
     unsigned                          http_minor:16;
     unsigned                          http_major:16;

@@ -50,7 +50,7 @@ int create_and_bind(const char* port)
     return listenfd;
 }
 
-void shift_buf(http_request_t *session, u_char *position) 
+void shift_buf(http_request_t *session, char *position) 
 {
     /* move the memory */
     int offset = position - session->buf;
@@ -316,7 +316,7 @@ int check_url(http_request_t *session)
 {
 
     int res, length;
-    u_char *p, *start, *end;
+    char *p, *start, *end;
     char *filename;
 
     start = session->uri_start;
@@ -364,7 +364,6 @@ void do_request(http_request_t *session)
     int nread, nwrite;
     int parse_result;
     errno = 0;
-    int len;
 
     parse_result = OK;
 
@@ -376,7 +375,7 @@ void do_request(http_request_t *session)
         return;
     }
 
-    len =  (session->buf + BUFSIZE) - session->last;
+    // len =  (session->buf + BUFSIZE) - session->last;
     nread = read(session->fd, session->last, (session->buf + BUFSIZE) - session->last);
     if (nread < 0) {
         if (errno == EAGAIN || errno == EWOULDBLOCK)

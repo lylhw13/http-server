@@ -4,10 +4,9 @@
 
 int atoi_hs(const char *start, const char *end)
 {
-    int val;
+    int val, width;
     char *endptr;
     char str[64];
-    int width;
     
     width = (int)(end - start);
     if (width <= 0 || width >= 64)   
