@@ -1,7 +1,6 @@
 *.o
 *.out
-http_server
-ngx*
+http-server
 *.gch
 tmp/
 *.txt
