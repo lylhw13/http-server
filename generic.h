@@ -89,8 +89,6 @@
 #define LOGE(...) ((void)fprintf(stderr, __VA_ARGS__))
 
 
-
-// typedef char char;
 typedef unsigned int uint_t;
 typedef unsigned int uint32_t;
 
