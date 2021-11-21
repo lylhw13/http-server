@@ -47,17 +47,19 @@
 #define FREE_MALLOC 1
 #define FREE_MMAP 2
 
-/* state for parse http parse line */
-#define HTTP_PARSE_HEADER_DONE         1
-#define HTTP_PARSE_INVALID_METHOD      2
-#define HTTP_PARSE_INVALID_REQUEST     3
-#define HTTP_PARSE_INVALID_VERSION     4
-#define HTTP_PARSE_INVALID_09_METHOD   5
-#define HTTP_PARSE_INVALID_HEADER      6
-
+/* state for parse */
 #define OK 0
-#define ERROR -1
-#define AGAIN -2
+#define AGAIN 1
+
+/* parse request line */
+#define HTTP_PARSE_INVALID_METHOD      -1
+#define HTTP_PARSE_INVALID_REQUEST     -2
+#define HTTP_PARSE_INVALID_VERSION     -3
+#define HTTP_PARSE_INVALID_09_METHOD   -4
+
+/* parse headers */
+#define HTTP_PARSE_HEADER_DONE         2
+#define HTTP_PARSE_INVALID_HEADER      -1
 
 #define HTTP_LC_HEADER_LEN 32
 
@@ -123,7 +125,7 @@ typedef struct http_request_s {
     /* buf for read request */
     char buf[BUFSIZE];   
     char *pos;
-    char *last;
+    char *last; /* not include */
 
 
     char out_buf[BUFSIZE];    /* used to response header */

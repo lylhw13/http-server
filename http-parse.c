@@ -104,7 +104,6 @@ http_parse_request_line(http_request_t *r)
                     break;
 
                 case 4:
-
                     if (ngx_str3Ocmp(m, 'P', 'O', 'S', 'T')) {
                         r->method = HTTP_POST;
                         break;
