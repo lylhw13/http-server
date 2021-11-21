@@ -19,13 +19,13 @@ ab -c 200 -n 100000 http://localhost:8080/
 -c     concurrency Number of multiple requests to perform at a time. Default is one request at a time.
 -n     number of requests
 ```
-
+## Benchmark Result
 ||http-server|nginx|
 |--|--|--|
 |keep-alive|41204.08 [#/sec] (mean)|42013.96 [#/sec] (mean)|
 |connection:close|19749.97 [#/sec] (mean)| 15069.64 [#/sec] (mean)|
 
-## Benchmark Result 
+## http-server Result 
 ### with keep-alive
 ```sh
 $ ab -k -c 200 -n 100000 http://localhost:8080/
@@ -125,8 +125,8 @@ Percentage of the requests served within a certain time (ms)
  100%     55 (longest request)
 ```
 
-# Nginx benchmark
-## Nginx Conf
+## Nginx benchmark
+### Nginx Conf
 ```txt
 user www-data;
 worker_processes 1;
@@ -145,7 +145,6 @@ http {
     }
 }
 ```
-## Result
 ### with keep-alive
 ```sh
 $ ab -k -c 200 -n 100000 http://localhost:8000/
