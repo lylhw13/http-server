@@ -44,9 +44,8 @@ void setnonblocking(int fd)
 /* single process */
 int main(int argc, char *argv[])
 {    
-    char *port = "33333";
+    char *port = "8080";
     int listenfd;
-    // int currfd;
     int epfd;
 
     struct sockaddr_storage cliaddr;
@@ -54,8 +53,6 @@ int main(int argc, char *argv[])
     int connfd;
     struct epoll_event event, *events;
     int nr_events, i;
-    // int nread;
-    // char buf[BUFSIZ];
 
     listenfd = create_and_bind(port);
     LOGD("listen fd %d\n", listenfd);
@@ -65,6 +62,7 @@ int main(int argc, char *argv[])
     if (listen(listenfd, SOMAXCONN) < 0)
         error("listen");
     setnonblocking(listenfd);
+    signal(SIGPIPE, SIG_IGN);
     
     epfd = epoll_create1(0);
     if (epfd < 0)
@@ -93,9 +91,7 @@ int main(int argc, char *argv[])
             if (events[i].data.fd == listenfd) {
                 connfd = accept(listenfd, (struct sockaddr *)&cliaddr, &cliaddr_len);   /* does this would block */
 
-                // LOGD("listen: connect %d\n", connfd);
                 if (connfd > 0) {
-                    // int opt;
                     setnonblocking(connfd);
 
                     http_request_t *ptr = (http_request_t *)malloc(sizeof(http_request_t));
