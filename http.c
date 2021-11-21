@@ -203,7 +203,6 @@ void do_respond(http_request_t *session)
 
     if (session->http_state == SESSION_END) {
         close(session->fd); /* epoll will auto remove when fd is close */
-        LOGE("do_respons free_request\n");
         free_request(session);
     }
 }
@@ -372,8 +371,6 @@ void do_request(http_request_t *session)
     int nread, nwrite;
     int parse_result;
 
-    // parse_result = OK;
-
     if (session->http_state == SESSION_END)
         return;
 
@@ -392,7 +389,6 @@ void do_request(http_request_t *session)
     if (nread <= 0) {
         epoll_ctl(session->epfd, EPOLL_CTL_DEL, session->fd, NULL);
         close(session->fd);
-        LOGE("nread<=0 free_request\n");
         free_request(session);
         return;
     }
@@ -409,7 +405,6 @@ void do_request(http_request_t *session)
                 /* this case is that the shift can't help */
                 if (session->request_start == session->buf) {
                     add_special_response(session, RSP_REQUEST_HEADER_FIELDS_TOO_LARGE);
-                    LOGE("too large\n");
                     session->http_state = SESSION_END;
                     return;
                 }
@@ -420,7 +415,11 @@ void do_request(http_request_t *session)
 
             if (parse_result < 0) {
                 add_special_response(session, RSP_BAD_REQUEST);
-                LOGE("bad request\n");
+                session->http_state = SESSION_END;
+                return;
+            }
+
+            if (check_url(session) != 0) {
                 session->http_state = SESSION_END;
                 return;
             }
@@ -445,18 +444,11 @@ void do_request(http_request_t *session)
 
         case PARSE_HEADER_DONE:
             if (session->method == HTTP_GET) {
-                LOGE("url %.*s\n", (int)(session->uri_end - session->uri_start), session->uri_start);
-                if (check_url(session) != 0) {
-                    LOGE("check url\n");
-                    session->http_state = SESSION_END;
-                    return;
-                }
                 session->parse_state = PARSE_BEGIN;
                 if (session->keep_alive)
                     continue;
 
                 if (session->pos == session->last) {
-                    LOGE("after keep_alive\n");
                     session->http_state = SESSION_END;
                     return;
                 }
