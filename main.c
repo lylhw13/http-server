@@ -16,20 +16,11 @@
 
 #define MAX_EVENTS 64
 
-
-// static struct option const longopts[] = 
-// {
-//     {"listen",  no_argument,       0, 'l'},   
-//     {"aes",     no_argument,       0, 's'},
-// };
-
-// void usage(int state)
-// {
-//     fprintf(stderr, 
-//         "usage: ncs [-s passwd] -l port\n"
-//         "       ncs [-s passwd] host port\n");
-//     exit(state);
-// }
+void usage(int state)
+{
+    fprintf(stderr, "usage: http-server port\n");
+    exit(state);
+}
 
 void setnonblocking(int fd)
 {
@@ -40,13 +31,18 @@ void setnonblocking(int fd)
     return;
 }
 
-
 /* single process */
 int main(int argc, char *argv[])
 {    
     char *port = "8080";
     int listenfd;
     int epfd;
+
+    if (argc == 2) {
+        port = atoi(argv[1]);
+        if (port == 0 || port > 65535)
+            usage(EXIT_FAILURE);
+    }
 
     struct sockaddr_storage cliaddr;
     socklen_t cliaddr_len;
@@ -114,7 +110,6 @@ int main(int argc, char *argv[])
                 continue;
             }
             else {
-                /* producer and consumer */
                 if (events[i].events & EPOLLIN) {
                     do_request(events[i].data.ptr);
                 }
