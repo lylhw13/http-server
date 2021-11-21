@@ -1,8 +1,12 @@
 CC=gcc
-CFLAG=-g -Wall
+
+CFLAG= -Wall
 
 LIBS = 
 
+ifdef DEBUG
+CFLAG += -g -DDEBUG
+endif
 
 PROG = http-server
 
@@ -13,3 +17,5 @@ $(PROG): generic.h helper.c http.c http-parse.c main.c
 
 clean:
 	rm $(PROG)
+
+# make DEBUG=1

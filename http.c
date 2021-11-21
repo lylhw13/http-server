@@ -176,7 +176,6 @@ void send_response(http_request_t * session, http_response_t *curr_rsp)
                 }
                 curr_rsp->pos += nwrite;
                 if (curr_rsp->pos == curr_rsp->body_length) {
-                    LOGD("body equal\n");
                     session->responses = curr_rsp->next;
                     free_response(curr_rsp);
                     curr_rsp->pos = 0;
@@ -325,8 +324,6 @@ int check_url(http_request_t *session)
     start = session->uri_start;
     end = session->uri_end;
 
-    // printf("url %.*s\n", (int)(end - start) + 1, start);
-
     if (*start != '/') {
         add_special_response(session, RSP_BAD_REQUEST);
         return -1;
@@ -338,32 +335,30 @@ int check_url(http_request_t *session)
             return -1;
         }
     }
-    add_special_response(session, RSP_OK);
-    return 0;
 
-    // if (1 == end - start) {
-    //     add_special_response(session, RSP_OK);
-    //     return 0;
-    // }
-    // length = end - start;
-    // filename = (char *)malloc(length + 2);
-    // filename[0] = '.';
-    // sprintf(filename + 1, "%.*s", length, start);
-    // filename[length + 1] = '\0';
+    if (1 == end - start) {
+        add_special_response(session, RSP_OK);
+        return 0;
+    }
+    length = end - start;
+    filename = (char *)malloc(length + 2);
+    filename[0] = '.';
+    sprintf(filename + 1, "%.*s", length, start);
+    filename[length + 1] = '\0';
 
-    // LOGD("filename is %s\n", filename);
+    LOGD("filename is %s\n", filename);
 
-    // if (access(filename, R_OK) == 0) {
-    //     add_sendfile_response(session, filename);
-    //     res = 0;
-    // }
-    // else {
-    //     add_special_response(session, RSP_NOT_FOUND);
-    //     res = -1;
-    // }
-    // free(filename);
+    if (access(filename, R_OK) == 0) {
+        add_sendfile_response(session, filename);
+        res = 0;
+    }
+    else {
+        add_special_response(session, RSP_NOT_FOUND);
+        res = -1;
+    }
+    free(filename);
 
-    // return res;
+    return res;
 }
 
 void do_request(http_request_t *session) 
@@ -454,7 +449,7 @@ void do_request(http_request_t *session)
                 }
             }
             if (session->method == HTTP_POST) {
-                //write the target file
+                /* write the target file */
                 session->parse_state = PARSE_BODY;
             }
             /* fall through */
